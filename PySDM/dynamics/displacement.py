@@ -141,6 +141,7 @@ class Displacement:  # pylint: disable=too-many-instance-attributes
         position_in_cell += displacement
 
     def update_cell_origin(self, cell_origin, position_in_cell):
+        floor_of_position = self.particulator.Storage.from_ndarray(np.zeros((self.dimension, self.particulator.n_sd), dtype=np.int64))
         floor_of_position = self.particulator.Storage.from_ndarray(
             np.zeros((self.dimension, self.particulator.n_sd), dtype=np.int64)
         )
