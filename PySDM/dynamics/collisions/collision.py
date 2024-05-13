@@ -19,7 +19,7 @@ from PySDM.attributes.physics.multiplicities import Multiplicities
 from PySDM.dynamics.collisions.breakup_efficiencies import ConstEb
 from PySDM.dynamics.collisions.breakup_fragmentations import AlwaysN
 from PySDM.dynamics.collisions.coalescence_efficiencies import ConstEc
-from PySDM.dynamics.impl.random_generator_optimizer import RandomGeneratorOptimizer
+from utils.random_generator_optimizer import RandomGeneratorOptimizer
 from PySDM.dynamics.impl.random_generator_optimizer_nopair import (
     RandomGeneratorOptimizerNoPair,
 )
@@ -119,6 +119,12 @@ class Collision:  # pylint: disable=too-many-instance-attributes
         empty_args_cellwise = {"shape": self.particulator.mesh.n_cell, "dtype": float}
 
         self.norm_factor_temp = self.particulator.Storage.empty(**empty_args_cellwise)
+        self.kernel_temp = self.particulator.PairwiseStorage.empty(
+                **empty_args_pairwise
+            )
+        
+        #self.gamma = self.particulator.PairwiseStorage.empty(**empty_args_pairwise)
+        #self.is_first_in_pair = self.particulator.PairIndicator(self.particulator.n_sd)
 
         # self.kernel_temp = self.particulator.PairwiseStorage.empty(
         #     **empty_args_pairwise
@@ -179,6 +185,9 @@ class Collision:  # pylint: disable=too-many-instance-attributes
             )
             self.gamma = self.particulator.PairwiseStorage.empty(**c_empty_args_pairwise)
             self.is_first_in_pair = self.particulator.PairIndicator(self.particulator.n_sd)
+
+            self.gamma= self.particulator.PairwiseStorage.empty(**c_empty_args_pairwise)
+            self.is_first_in_pair= self.particulator.PairIndicator(self.particulator.n_sd)
 
             if not self.adaptive:
                 for _ in range(self.__substeps):
