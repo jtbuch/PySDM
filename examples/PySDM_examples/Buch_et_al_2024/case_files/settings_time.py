@@ -28,6 +28,7 @@ class Settings:
             "t_max",
             "n_seed_sds",
             "r_seed",
+            "kappa_seed",
             "m_param",
             "seed_z_part",
             "t_part",
@@ -51,6 +52,7 @@ class Settings:
         t_max: float = 60 * si.minutes,
         n_seed_sds: Optional[int] = 1,
         r_seed: Optional[float] = 1 * si.um,
+        kappa_seed: Optional[float] = 0.85,
         m_param: Optional[float] = 1E9,
         seed_z_part: Optional[tuple] = None,
         t_part: Optional[tuple] = None,
@@ -76,6 +78,7 @@ class Settings:
         self.t_max = t_max
         self.n_seed_sds= n_seed_sds
         self.r_seed= r_seed
+        self.kappa_seed= kappa_seed
         self.m_param= m_param
         self.seed_z_part= seed_z_part
         self.t_part = t_part
