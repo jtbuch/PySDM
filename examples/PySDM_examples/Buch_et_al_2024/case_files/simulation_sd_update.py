@@ -19,6 +19,7 @@ from PySDM.initialisation.sampling import spectral_sampling
 from PySDM.initialisation.sampling.spatial_sampling import Pseudorandom
 from PySDM.physics import si
 
+
 class Simulation:
     def __init__(self, settings, backend=CPU):
         self.nt = settings.nt
@@ -30,13 +31,13 @@ class Simulation:
         self.output_attributes = None
         self.output_products = None
         self.n_seed_sds = settings.n_seed_sds
-        self.r_seed= settings.r_seed
-        self.kappa_seed= settings.kappa_seed
-        self.m_param= settings.m_param
-        self.seed_z_part= settings.seed_z_part
-        self.dt= settings.dt
-        self.tpart_min= int(settings.t_part[0] / settings.dt)
-        self.tpart_max= int(settings.t_part[1] / settings.dt)
+        self.r_seed = settings.r_seed
+        self.kappa_seed = settings.kappa_seed
+        self.m_param = settings.m_param
+        self.seed_z_part = settings.seed_z_part
+        self.dt = settings.dt
+        self.tpart_min = int(settings.t_part[0] / settings.dt)
+        self.tpart_max = int(settings.t_part[1] / settings.dt)
 
         self.mesh = Mesh(
             grid=(settings.nz,),
@@ -92,7 +93,7 @@ class Simulation:
 
         self.products = []
         if settings.precip:
-           self.add_collision_dynamic(self.builder, settings, self.products)
+            self.add_collision_dynamic(self.builder, settings, self.products)
 
         displacement = Displacement(
             enable_sedimentation=settings.precip,
@@ -104,9 +105,9 @@ class Simulation:
 
         # Moving spectral sampling by components to kinematic_1d_bimodal.py
         self.attributes = self.env.init_attributes(
-            spatial_discretisation= Pseudorandom(),
+            spatial_discretisation=Pseudorandom(),
             n_sd_per_mode=settings.n_sd_per_mode,
-            nz_tot= settings.nz,
+            nz_tot=settings.nz,
             aerosol_modes_by_kappa=settings.aerosol_modes_by_kappa,
             collisions_only=not settings.enable_condensation,
             z_part=settings.z_part,
@@ -168,7 +169,7 @@ class Simulation:
             )
         if settings.precip:
             self.products.extend(
-                [   
+                [
                     PySDM_products.CollisionRatePerGridbox(
                         name="collision_rate",
                     ),
