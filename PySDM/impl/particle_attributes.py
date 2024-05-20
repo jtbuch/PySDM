@@ -79,13 +79,13 @@ class ParticleAttributes:  # pylint: disable=too-many-instance-attributes
     def reset_cell_idx(self):
         self.cell_idx.reset_index()
         self.__sort_by_cell_id()
-    
+
     def get_idx(self):
         return self.__idx
-    
+
     def set_idx(self, value):
-        self.__idx.data= np.append(self.__idx.data, value)
-    
+        self.__idx.data = np.append(self.__idx.data, value)
+
     def keys(self):
         return self.__attributes.keys()
 

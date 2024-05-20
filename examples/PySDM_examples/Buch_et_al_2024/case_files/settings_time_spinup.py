@@ -55,7 +55,7 @@ class Settings:
         n_seed_sds: Optional[int] = 1,
         r_seed: Optional[float] = 1 * si.um,
         kappa_seed: Optional[float] = 0.85,
-        m_param: Optional[float] = 1E9,
+        m_param: Optional[float] = 1e9,
         seed_z_part: Optional[tuple] = None,
         t_part: Optional[tuple] = None,
         precip: bool = True,
@@ -65,12 +65,12 @@ class Settings:
         collision_kernel=None
     ):
         self.formulae = formulae or Formulae()
-        self.n_sd_per_mode= n_sd_per_mode
-        self.n_sd_sum= sum(self.n_sd_per_mode)
+        self.n_sd_per_mode = n_sd_per_mode
+        self.n_sd_sum = sum(self.n_sd_per_mode)
         self.aerosol_modes_by_kappa = aerosol_modes_by_kappa
         self.p0 = p0
         self.rho_times_w_1 = rho_times_w_1
-        #self.particles_per_volume_STP = particles_per_volume_STP
+        # self.particles_per_volume_STP = particles_per_volume_STP
         self.dt = dt
         self.dz = dz
         self.precip = precip
@@ -78,11 +78,11 @@ class Settings:
         self.z_part = z_part
         self.z_max = z_max
         self.t_max = t_max
-        self.n_seed_sds= n_seed_sds
-        self.r_seed= r_seed
-        self.kappa_seed= kappa_seed
-        self.m_param= m_param
-        self.seed_z_part= seed_z_part
+        self.n_seed_sds = n_seed_sds
+        self.r_seed = r_seed
+        self.kappa_seed = kappa_seed
+        self.m_param = m_param
+        self.seed_z_part = seed_z_part
         self.t_part = t_part
         self.collision_kernel = collision_kernel or Geometric(collection_efficiency=1)
         self.spin_up_time = spin_up_time
@@ -192,7 +192,7 @@ class Settings:
 
     @property
     def n_sd(self):
-        return self.nz * self.n_sd_sum # include zpart for seeded aerosols
+        return self.nz * self.n_sd_sum  # include zpart for seeded aerosols
 
     @property
     def nz(self):
@@ -213,7 +213,7 @@ class Settings:
     @property
     def n_spin_up(self) -> int:
         return int(self.spin_up_time / self.dt)
-    
+
     @property
     def output_steps(self) -> np.ndarray:
         return np.arange(0, self.nt + 1, 1)

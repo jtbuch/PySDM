@@ -42,9 +42,15 @@ class RandomGeneratorOptimizer:  # pylint: disable=too-many-instance-attributes
                 self.rand.urand(self.rnd)
         else:
             shift = 0
-            self.pairs_rand= self.particulator.Storage.empty(self.particulator.n_sd + shift, dtype=float)
-            self.rand = self.particulator.Storage.empty(self.particulator.n_sd // 2, dtype=float)
-            self.rnd = self.particulator.Random(self.particulator.n_sd + shift, self.seed)
+            self.pairs_rand = self.particulator.Storage.empty(
+                self.particulator.n_sd + shift, dtype=float
+            )
+            self.rand = self.particulator.Storage.empty(
+                self.particulator.n_sd // 2, dtype=float
+            )
+            self.rnd = self.particulator.Random(
+                self.particulator.n_sd + shift, self.seed
+            )
             self.pairs_rand.urand(self.rnd)
             self.rand.urand(self.rnd)
         self.substep += 1

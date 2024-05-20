@@ -19,11 +19,11 @@ from PySDM.physics import si
 
 class Common:
     def __init__(
-        self, 
+        self,
         formulae: Formulae,
         n_sd_per_mode: tuple,
-        aerosol_modes_by_kappa: Dict[float, Spectrum]
-        ):
+        aerosol_modes_by_kappa: Dict[float, Spectrum],
+    ):
 
         self.formulae = formulae
         const = formulae.constants
@@ -52,10 +52,10 @@ class Common:
         self.displacement_rtol = displacement.DEFAULTS.rtol
         self.freezing_inp_frac = 1
 
-        #self.n_sd_per_gridbox = 20
-        self.n_sd_per_mode= n_sd_per_mode
-        self.n_sd_sum= sum(self.n_sd_per_mode)
-        self.aerosol_modes_by_kappa= aerosol_modes_by_kappa
+        # self.n_sd_per_gridbox = 20
+        self.n_sd_per_mode = n_sd_per_mode
+        self.n_sd_sum = sum(self.n_sd_per_mode)
+        self.aerosol_modes_by_kappa = aerosol_modes_by_kappa
 
         self.aerosol_radius_threshold = 0.5 * si.micrometre
         self.drizzle_radius_threshold = 25 * si.micrometre
@@ -152,7 +152,7 @@ class Common:
 
     @property
     def n_sd(self):
-        return self.grid[0] * self.grid[1] * self.n_sd_sum #self.n_sd_per_gridbox
+        return self.grid[0] * self.grid[1] * self.n_sd_sum  # self.n_sd_per_gridbox
 
     @property
     def initial_vapour_mixing_ratio_profile(self):

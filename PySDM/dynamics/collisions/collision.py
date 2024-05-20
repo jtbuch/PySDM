@@ -103,7 +103,7 @@ class Collision:  # pylint: disable=too-many-instance-attributes
             "optimized_random": self.optimized_random,
             "dt_min": self.dt_coal_range[0],
             "seed": builder.formulae.seed,
-         }
+        }
         self.rnd_opt_coll = RandomGeneratorOptimizer(**rnd_args)
         if self.enable_breakup:
             self.rnd_opt_proc = RandomGeneratorOptimizerNoPair(**rnd_args)
@@ -120,11 +120,11 @@ class Collision:  # pylint: disable=too-many-instance-attributes
 
         self.norm_factor_temp = self.particulator.Storage.empty(**empty_args_cellwise)
         self.kernel_temp = self.particulator.PairwiseStorage.empty(
-                **empty_args_pairwise
-            )
-        
-        #self.gamma = self.particulator.PairwiseStorage.empty(**empty_args_pairwise)
-        #self.is_first_in_pair = self.particulator.PairIndicator(self.particulator.n_sd)
+            **empty_args_pairwise
+        )
+
+        # self.gamma = self.particulator.PairwiseStorage.empty(**empty_args_pairwise)
+        # self.is_first_in_pair = self.particulator.PairIndicator(self.particulator.n_sd)
 
         # self.kernel_temp = self.particulator.PairwiseStorage.empty(
         #     **empty_args_pairwise
@@ -179,15 +179,26 @@ class Collision:  # pylint: disable=too-many-instance-attributes
 
     def __call__(self):
         if self.enable:
-            c_empty_args_pairwise = {"shape": self.particulator.n_sd // 2, "dtype": float}
+            c_empty_args_pairwise = {
+                "shape": self.particulator.n_sd // 2,
+                "dtype": float,
+            }
             self.kernel_temp = self.particulator.PairwiseStorage.empty(
                 **c_empty_args_pairwise
             )
-            self.gamma = self.particulator.PairwiseStorage.empty(**c_empty_args_pairwise)
-            self.is_first_in_pair = self.particulator.PairIndicator(self.particulator.n_sd)
+            self.gamma = self.particulator.PairwiseStorage.empty(
+                **c_empty_args_pairwise
+            )
+            self.is_first_in_pair = self.particulator.PairIndicator(
+                self.particulator.n_sd
+            )
 
-            self.gamma= self.particulator.PairwiseStorage.empty(**c_empty_args_pairwise)
-            self.is_first_in_pair= self.particulator.PairIndicator(self.particulator.n_sd)
+            self.gamma = self.particulator.PairwiseStorage.empty(
+                **c_empty_args_pairwise
+            )
+            self.is_first_in_pair = self.particulator.PairIndicator(
+                self.particulator.n_sd
+            )
 
             if not self.adaptive:
                 for _ in range(self.__substeps):
@@ -199,8 +210,8 @@ class Collision:  # pylint: disable=too-many-instance-attributes
                     self.particulator.attributes.cell_idx.sort_by_key(self.dt_left)
                     self.step()
                     self.particulator.attributes.cut_working_length(
-                            self.particulator.adaptive_sdm_end(self.dt_left)
-                        )
+                        self.particulator.adaptive_sdm_end(self.dt_left)
+                    )
 
                 self.particulator.attributes.reset_working_length()
                 self.particulator.attributes.reset_cell_idx()

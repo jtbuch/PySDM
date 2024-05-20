@@ -19,6 +19,7 @@ from PySDM.initialisation.sampling import spectral_sampling
 from utils.spatial_sampling import Pseudorandom
 from PySDM.physics import si
 
+
 class Simulation:
     def __init__(self, settings, backend=CPU):
         self.nt = settings.nt
@@ -30,13 +31,13 @@ class Simulation:
         self.output_attributes = None
         self.output_products = None
         self.n_seed_sds = settings.n_seed_sds
-        self.r_seed= settings.r_seed
-        self.kappa_seed= settings.kappa_seed
-        self.m_param= settings.m_param
-        self.seed_z_part= settings.seed_z_part
-        self.dt= settings.dt
-        self.tpart_min= int(settings.t_part[0] / settings.dt)
-        self.tpart_max= int(settings.t_part[1] / settings.dt)
+        self.r_seed = settings.r_seed
+        self.kappa_seed = settings.kappa_seed
+        self.m_param = settings.m_param
+        self.seed_z_part = settings.seed_z_part
+        self.dt = settings.dt
+        self.tpart_min = int(settings.t_part[0] / settings.dt)
+        self.tpart_max = int(settings.t_part[1] / settings.dt)
 
         self.mesh = Mesh(
             grid=(settings.nz,),
@@ -92,7 +93,7 @@ class Simulation:
 
         self.products = []
         if settings.precip:
-           self.add_collision_dynamic(self.builder, settings, self.products)
+            self.add_collision_dynamic(self.builder, settings, self.products)
 
         displacement = Displacement(
             enable_sedimentation=settings.precip,
@@ -104,9 +105,9 @@ class Simulation:
 
         # Moving spectral sampling by components to kinematic_1d_bimodal.py
         self.attributes = self.env.init_attributes(
-            spatial_discretisation= Pseudorandom(),
+            spatial_discretisation=Pseudorandom(),
             n_sd_per_mode=settings.n_sd_per_mode,
-            nz_tot= settings.nz,
+            nz_tot=settings.nz,
             aerosol_modes_by_kappa=settings.aerosol_modes_by_kappa,
             collisions_only=not settings.enable_condensation,
             z_part=settings.z_part,
@@ -268,23 +269,36 @@ class Simulation:
                 )
             self.particulator.run(steps=1)
             self.save(step + 1)
-            
+
             if self.n_seed_sds > 0:
                 if step >= self.tpart_min and step < self.tpart_max:
-                    req_attrs= ['multiplicity', 'cell id', 'volume', 'dry volume', 'kappa times dry volume', 'cell origin', 'position in cell']
-                    rem_attrs= set(self.particulator.attributes.keys()) - set(req_attrs)
+                    req_attrs = [
+                        "multiplicity",
+                        "cell id",
+                        "volume",
+                        "dry volume",
+                        "kappa times dry volume",
+                        "cell origin",
+                        "position in cell",
+                    ]
+                    rem_attrs = set(self.particulator.attributes.keys()) - set(
+                        req_attrs
+                    )
                     for k in rem_attrs:
-                        self.particulator.attributes[k].data= np.append(self.particulator.attributes[k].data, np.zeros(self.n_seed_sds, dtype= float)) # preupdate derived attribute array
-                    
-                    self.particulator.n_sd_setter(self.n_seed_sds) # update n_sd
-                    self.particulator.attributes= self.env.inject_particles(
-                        spatial_discretisation= Pseudorandom(),
-                        z_part= self.seed_z_part,
-                        t_dur= int((self.tpart_max - self.tpart_min)*self.dt),
-                        n_seed_sds= self.n_seed_sds,
-                        kappa= self.kappa_seed,
-                        r_dry= self.r_seed,
-                        m_param= self.m_param
+                        self.particulator.attributes[k].data = np.append(
+                            self.particulator.attributes[k].data,
+                            np.zeros(self.n_seed_sds, dtype=float),
+                        )  # preupdate derived attribute array
+
+                    self.particulator.n_sd_setter(self.n_seed_sds)  # update n_sd
+                    self.particulator.attributes = self.env.inject_particles(
+                        spatial_discretisation=Pseudorandom(),
+                        z_part=self.seed_z_part,
+                        t_dur=int((self.tpart_max - self.tpart_min) * self.dt),
+                        n_seed_sds=self.n_seed_sds,
+                        kappa=self.kappa_seed,
+                        r_dry=self.r_seed,
+                        m_param=self.m_param,
                     )
 
         Outputs = namedtuple("Outputs", "products attributes")

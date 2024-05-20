@@ -7,7 +7,13 @@ from PySDM.physics import si
 
 
 class StratoCumulus(Common):
-    def __init__(self, formulae, rhod_w_max: float, n_sd_per_mode: tuple, aerosol_modes_by_kappa: Dict[float, Spectrum]):
+    def __init__(
+        self,
+        formulae,
+        rhod_w_max: float,
+        n_sd_per_mode: tuple,
+        aerosol_modes_by_kappa: Dict[float, Spectrum],
+    ):
         super().__init__(formulae, n_sd_per_mode, aerosol_modes_by_kappa)
         self.th_std0 = 289 * si.kelvins
         self.initial_water_vapour_mixing_ratio = 7.5 * si.grams / si.kilogram
