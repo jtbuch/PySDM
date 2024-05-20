@@ -35,9 +35,7 @@ class Simulation:
         self.kappa_seed = settings.kappa_seed
         self.m_param = settings.m_param
         self.seed_z_part = settings.seed_z_part
-        self.dt = settings.dt
-        self.tpart_min = int(settings.t_part[0] / settings.dt)
-        self.tpart_max = int(settings.t_part[1] / settings.dt)
+        self.seed_step = int(settings.t_part[1] / settings.dt)
 
         self.mesh = Mesh(
             grid=(settings.nz,),
@@ -264,6 +262,79 @@ class Simulation:
                 )
             self.particulator.run(steps=1)
             self.save(step + 1)
+
+        Outputs = namedtuple("Outputs", "products attributes")
+        output_results = Outputs(self.output_products, self.output_attributes)
+        return output_results
+
+    def stepwise_sd_update(self, seed_step):
+
+        self.save(0)
+
+        for i in range(self.nt):
+
+            if i == seed_step:
+                try:
+                    potseed_arr = np.where(
+                        np.abs(
+                            self.particulator.attributes["radius"].data - self.r_seed
+                        )
+                        < self.r_seed / 2
+                    )[0]
+                    potseed_arr = np.where(
+                        (
+                            self.particulator.attributes["position in cell"].data[
+                                0, potseed_arr
+                            ]
+                            > self.seed_z_part[0]
+                        )
+                        & (
+                            self.particulator.attributes["position in cell"].data[
+                                0, potseed_arr
+                            ]
+                            <= self.seed_z_part[1]
+                        )
+                    )[0]
+                    potseed = np.random.choice(potseed_arr, 1)[0]
+                    self.particulator.attributes["multiplicity"].data[
+                        potseed
+                    ] += self.m_param
+                except:
+                    potseed_arr = np.where(
+                        np.abs(
+                            self.particulator.attributes["radius"].data - self.r_seed
+                        )
+                        < self.r_seed
+                    )[0]
+                    potseed_arr = np.where(
+                        (
+                            self.particulator.attributes["position in cell"].data[
+                                0, potseed_arr
+                            ]
+                            > self.seed_z_part[0]
+                        )
+                        & (
+                            self.particulator.attributes["position in cell"].data[
+                                0, potseed_arr
+                            ]
+                            <= self.seed_z_part[1]
+                        )
+                    )[0]
+                    potseed = np.random.choice(potseed_arr, 1)[0]
+
+                    self.particulator.attributes["multiplicity"].data[
+                        potseed
+                    ] += self.m_param
+                # simobj.particulator.attributes['kappa'].data[potseed]+= delta_kappa
+
+            self.mpdata.update_advector_field()
+            if "Displacement" in self.particulator.dynamics:
+                self.particulator.dynamics["Displacement"].upload_courant_field(
+                    (self.mpdata.advector / self.g_factor_vec,)
+                )
+            self.particulator.run(steps=1)
+
+            self.save(i + 1)
 
         Outputs = namedtuple("Outputs", "products attributes")
         output_results = Outputs(self.output_products, self.output_attributes)
