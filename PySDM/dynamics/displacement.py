@@ -144,9 +144,6 @@ class Displacement:  # pylint: disable=too-many-instance-attributes
         floor_of_position = self.particulator.Storage.from_ndarray(
             np.zeros((self.dimension, self.particulator.n_sd), dtype=np.int64)
         )
-        floor_of_position = self.particulator.Storage.from_ndarray(
-            np.zeros((self.dimension, self.particulator.n_sd), dtype=np.int64)
-        )
         floor_of_position.floor(position_in_cell)
         cell_origin += floor_of_position
         position_in_cell -= floor_of_position
