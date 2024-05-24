@@ -32,6 +32,7 @@ class Settings:
             "m_param",
             "seed_z_part",
             "t_part",
+            "save_spec_and_attr_times",
             "cloud_water_radius_range",
             "rain_water_radius_range",
             "r_bins_edges_dry",
@@ -82,6 +83,7 @@ class Settings:
         self.m_param = m_param
         self.seed_z_part = seed_z_part
         self.t_part = t_part
+        self.save_spec_and_attr_times = save_spec_and_attr_times
         self.collision_kernel = collision_kernel or Geometric(collection_efficiency=1)
 
         t_1 = 600 * si.s
