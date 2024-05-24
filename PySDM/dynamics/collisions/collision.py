@@ -19,7 +19,7 @@ from PySDM.attributes.physics.multiplicities import Multiplicities
 from PySDM.dynamics.collisions.breakup_efficiencies import ConstEb
 from PySDM.dynamics.collisions.breakup_fragmentations import AlwaysN
 from PySDM.dynamics.collisions.coalescence_efficiencies import ConstEc
-from utils.random_generator_optimizer import RandomGeneratorOptimizer
+from PySDM.dynamics.impl.random_generator_optimizer import RandomGeneratorOptimizer
 from PySDM.dynamics.impl.random_generator_optimizer_nopair import (
     RandomGeneratorOptimizerNoPair,
 )

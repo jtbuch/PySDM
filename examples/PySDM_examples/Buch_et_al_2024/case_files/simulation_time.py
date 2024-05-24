@@ -4,19 +4,19 @@ import numpy as np
 from PySDM_examples.Shipway_and_Hill_2012.mpdata_1d import MPDATA_1D
 
 import PySDM.products as PySDM_products
-from utils.builder import Builder
+from PySDM.builder import Builder
 from PySDM.backends import CPU
 from PySDM.dynamics import (
     AmbientThermodynamics,
     Condensation,
     EulerianAdvection,
+    Coalescence,
+    Displacement,
 )
-from utils.collision import Coalescence
-from utils.displacement import Displacement
 from utils.kinematic_1d_bimodal_time import Kinematic1D
 from PySDM.impl.mesh import Mesh
 from PySDM.initialisation.sampling import spectral_sampling
-from utils.spatial_sampling import Pseudorandom
+from PySDM.initialisation.sampling.spatial_sampling import Pseudorandom
 from PySDM.physics import si
 
 
@@ -272,6 +272,7 @@ class Simulation:
 
             if self.n_seed_sds > 0:
                 if step >= self.tpart_min and step < self.tpart_max:
+                    self.n_tot_sds = self.particulator.n_sd
                     req_attrs = [
                         "multiplicity",
                         "cell id",
@@ -294,12 +295,26 @@ class Simulation:
                     self.particulator.attributes = self.env.inject_particles(
                         spatial_discretisation=Pseudorandom(),
                         z_part=self.seed_z_part,
-                        t_dur=int((self.tpart_max - self.tpart_min) * self.dt),
+                        t_dur=(self.tpart_max - self.tpart_min),
                         n_seed_sds=self.n_seed_sds,
                         kappa=self.kappa_seed,
                         r_dry=self.r_seed,
                         m_param=self.m_param,
                     )
+                    self.particulator.attributes.set_idx(
+                        np.arange(self.n_tot_sds, self.n_tot_sds + self.n_seed_sds, 1)
+                    )  # update idx
+
+                # check if the seed SDs exhibit any displacement
+                tot_seeds = self.n_seed_sds * int(self.tpart_max - self.tpart_min)
+                if step == self.tpart_max:
+                    self.init_poscell = self.particulator.attributes[
+                        "position in cell"
+                    ].data[0, -tot_seeds:]
+                elif step == self.nt - 1:
+                    self.final_poscell = self.particulator.attributes[
+                        "position in cell"
+                    ].data[0, -tot_seeds:]
 
         Outputs = namedtuple("Outputs", "products attributes")
         output_results = Outputs(self.output_products, self.output_attributes)
