@@ -95,12 +95,6 @@ class Settings:
             (2 * apprx_w1 * t_1 / np.pi) // self.dz + 1
         ) * self.dz
 
-        # self.wet_radius_spectrum_per_mass_of_dry_air = spectra.Lognormal(
-        #     norm_factor=particles_per_volume_STP / self.formulae.constants.rho_STP,
-        #     m_mode=0.08 / 2 * si.um,
-        #     s_geom=1.4,
-        # )
-
         self._th = interp1d(
             (0.0 * si.m, 740.0 * si.m, 3260.00 * si.m),
             (297.9 * si.K, 297.9 * si.K, 312.66 * si.K),
