@@ -15,7 +15,7 @@ from PySDM.dynamics import (
     EulerianAdvection,
     Freezing,
 )
-from utils.spatial_sampling import Pseudorandom
+from PySDM.initialisation.sampling.spatial_sampling import Pseudorandom
 
 
 class Simulation:
