@@ -271,6 +271,7 @@ class Simulation:
             self.particulator.attributes["position in cell"].data[0, :].max(),
             self.nz,
         )
+        # find the cell index of each SD
         ncell_arr = (
             np.digitize(
                 self.particulator.attributes["position in cell"].data[0, :],
@@ -312,7 +313,8 @@ class Simulation:
                     npotseed_arr = npotseed_arr[npotseed_arr != potseed]
 
                     # update the attributes of the potential seed and the other SDs in the same cell
-                    # if multiplicity of all neighboring SDs is increased, there is a distinct seeding signal
+                    # critical update step is conserving the water mass; thus the distributed water mass needs to be weighted by the multiplicity of the SDs
+                    # if multiplicity of all neighboring SDs is increased by redistributing the donor SD's multipilicity, there is a distinct seeding signal, however that's not physically consistent
                     gamma_fac = (
                         self.particulator.attributes["multiplicity"].data[potseed]
                         / self.particulator.attributes["multiplicity"].data[
