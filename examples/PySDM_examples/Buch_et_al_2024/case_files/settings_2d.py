@@ -23,16 +23,33 @@ class Settings(StratoCumulus):
             "initial_dry_potential_temperature_profile",
             "initial_vapour_mixing_ratio_profile",
             "rhod_w_max",
+            "n_sd_per_mode",
+            "aerosol_modes_by_kappa",
+            "z_part",
+            "x_part",
+            "simulation_time",
+            "spin_up_time",
+            "r_seed",
+            "m_param",
+            "kappa_seed",
         )
 
     def __init__(
         self,
         formulae=None,
         rhod_w_max: float = 0.6 * si.metres / si.seconds * (si.kilogram / si.metre**3),
+        grid: tuple = None,
+        size: tuple = None,
         n_sd_per_mode: tuple = None,
         aerosol_modes_by_kappa: Dict[float, Spectrum] = None,
         z_part: Optional[tuple] = None,
         x_part: Optional[tuple] = None,
+        simulation_time: float = None,
+        dt: float = None,
+        spin_up_time: float = None,
+        r_seed: float = None,
+        m_param: float = None,
+        kappa_seed: float = None,
     ):
         super().__init__(
             formulae or Formulae(),
@@ -41,15 +58,20 @@ class Settings(StratoCumulus):
             aerosol_modes_by_kappa=aerosol_modes_by_kappa,
         )
 
-        self.grid = (25, 25)
-        self.size = (1500 * si.metres, 1500 * si.metres)
+        self.grid = grid
+        self.size = size
         self.z_part = z_part
         self.x_part = x_part
 
         # output steps
-        self.simulation_time = 90 * si.minute
-        self.dt = 5 * si.second
-        self.spin_up_time = 1 * si.hour
+        self.simulation_time = simulation_time  # 90 * si.minute
+        self.dt = dt  # 5 * si.second
+        self.spin_up_time = spin_up_time  # 1 * si.hour
+
+        # seed properties
+        self.r_seed = r_seed
+        self.m_param = m_param
+        self.kappa_seed = kappa_seed
 
         # additional breakup dynamics
         mu_r = 10 * si.um

@@ -285,7 +285,7 @@ class Simulation:
 
             if i in seed_step:
                 try:
-                    # ramdomly select a SD candidate to be the potential seed; tolerance set to half the seed radius
+                    # randomly select a SD candidate to be the potential seed; tolerance set to half the seed radius
                     potseed_arr = np.where(
                         np.abs(
                             self.particulator.attributes["radius"].data - self.r_seed
