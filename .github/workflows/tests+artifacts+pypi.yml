@@ -31,6 +31,7 @@ jobs:
         run: git diff
 
   nojit_and_codecov:
+    needs: [precommit, pylint]
     runs-on: ubuntu-latest
     env:
       NUMBA_DISABLE_JIT: 1
@@ -48,7 +49,7 @@ jobs:
         pip install -e ./examples
         pip install pytest-cov
         pytest --durations=10 -We tests/unit_tests --cov-report=xml --cov=PySDM
-    - uses: codecov/codecov-action@v4.1.0
+    - uses: codecov/codecov-action@v4.5.0
       with:
         fail_ci_if_error: true
         verbose: true
@@ -68,11 +69,10 @@ jobs:
         with:
           python-version: 3.9
       - run: |
-          pip install pdoc3
+          pip install pdoc
           pip install -e .
           pip install -e examples
-          python -We -m pdoc --html PySDM examples/PySDM_examples
-          python -We .github/workflows/pdoc_index_workaround.py
+          PDOC_ALLOW_EXEC=1 python -We -m pdoc -o html PySDM examples/PySDM_examples -t pdoc_templates
       - if: ${{ github.ref == 'refs/heads/main' && matrix.platform == 'ubuntu-latest' }}
         uses: JamesIves/github-pages-deploy-action@4.1.1
         with:
@@ -96,7 +96,6 @@ jobs:
         python -m pip install --upgrade pip
         # TODO #1160 https://github.com/pylint-dev/pylint/issues/9099
         pip install "pylint<3.0.0" nbqa
-        pip install pdoc3 # (pdoc3 for checking the .github/workflows/pdoc_index_workaround.py)
         pip install -r tests/devops_tests/requirements.txt
         pip install -e ./examples[tests]
         pip install -e .[tests]
@@ -120,7 +119,7 @@ jobs:
           prop_path: 'creators'
 
   tests:
-    needs: [pylint, pdoc, nojit_and_codecov, precommit, zenodo_json]
+    needs: [pdoc, nojit_and_codecov, zenodo_json]
     strategy:
       matrix:
         platform: [ubuntu-latest, macos-12, windows-latest]
@@ -173,6 +172,7 @@ jobs:
 #           limit-access-to-actor: true
 
   examples-setup:
+    needs: [nojit_and_codecov]
     strategy:
       matrix:
         platform: [ubuntu-22.04, macos-12, windows-latest]
@@ -208,7 +208,7 @@ jobs:
           key: examples_pip_cache-${{ matrix.platform }}-${{ matrix.python-version }}-${{ env.toml_ci_md5 }}
 
   examples:
-    needs: [pylint, precommit, examples-setup]
+    needs: [examples-setup]
     strategy:
       matrix:
         platform: [ubuntu-22.04, macos-12, windows-latest]
