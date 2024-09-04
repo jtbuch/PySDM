@@ -212,7 +212,7 @@ class Simulation:
         if self.storage is not None:
             self.storage.init(self.settings)
 
-    def stepwise_sd_update(self, seed_step, spup_flag=False):
+    def stepwise_sd_update(self, seed_step=[], spup_flag=False):
 
         cell_edge_z_arr = np.linspace(
             self.particulator.attributes["position in cell"].data[0, :].min(),
@@ -241,8 +241,15 @@ class Simulation:
 
         # spinup the simulation for 1 hour to get the initial state
         if spup_flag:
+            self.set(Collision, "enable", False)
+            self.set(Displacement, "enable_sedimentation", False)
+            self.set(Freezing, "enable", False)
             self.particulator.run(steps=self.settings.n_spin_up)
+
             self.particulator.n_steps = 0  # reset the step counter before full run
+            self.set(Collision, "enable", True)
+            self.set(Displacement, "enable_sedimentation", True)
+            self.set(Freezing, "enable", True)
 
         for step in self.settings.output_steps:
             if step in seed_step:
@@ -370,3 +377,8 @@ class Simulation:
     def store(self, step):
         for name, product in self.particulator.products.items():
             self.storage.save(product.get(), step, name)
+
+    def set(self, dynamic, attr, value):
+        key = dynamic.__name__
+        if key in self.particulator.dynamics:
+            setattr(self.particulator.dynamics[key], attr, value)

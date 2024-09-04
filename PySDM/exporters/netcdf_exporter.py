@@ -94,7 +94,7 @@ class NetCDFExporter:  # pylint: disable=too-few-public-methods
 
     def run(self, controller):
         with controller:
-            controller.set_percent(0)
+            # controller.set_percent(0)
             with netcdf_file(self.filename, mode="w") as ncdf:
                 # self._write_settings(ncdf)
                 self._create_dimensions(ncdf)
@@ -103,4 +103,4 @@ class NetCDFExporter:  # pylint: disable=too-few-public-methods
                     if controller.panic:
                         break
                     self._write_variables(i)
-                    controller.set_percent((i + 1) / len(self.settings.output_steps))
+                    # controller.set_percent((i + 1) / len(self.settings.output_steps))
