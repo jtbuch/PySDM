@@ -25,18 +25,18 @@ class Simulation:
         self.nt = settings.nt
         self.nz = settings.nz
         self.z0 = -settings.particle_reservoir_depth
+        self.n_sd_per_mode = settings.n_sd_per_mode
         self.save_spec_and_attr_times = settings.save_spec_and_attr_times
         self.number_of_bins = settings.number_of_bins
 
         self.particulator = None
         self.output_attributes = None
         self.output_products = None
-        self.n_seed_sds = settings.n_seed_sds
         self.r_seed = settings.r_seed
         self.kappa_seed = settings.kappa_seed
-        self.m_param = settings.m_param
+        self.int_inj_rate = settings.int_inj_rate
+        self.n_seed_sds = settings.n_seed_sds
         self.seed_z_part = settings.seed_z_part
-        self.seed_step = int(settings.t_part[1] / settings.dt)
 
         self.mesh = Mesh(
             grid=(settings.nz,),
@@ -264,7 +264,7 @@ class Simulation:
         output_results = Outputs(self.output_products, self.output_attributes)
         return output_results
 
-    def stepwise_sd_update(self, seed_step):
+    def stepwise_sd_update(self, seed_step, seeding_type="delta", tol=0.5):
 
         cell_edge_arr = np.linspace(
             self.particulator.attributes["position in cell"].data[0, :].min(),
@@ -284,13 +284,20 @@ class Simulation:
         for i in range(self.nt):
 
             if i in seed_step:
-                try:
+                if seeding_type == "delta":
+                    self.n_seed_sds = 1
+                    self.m_param = (
+                        self.int_inj_rate
+                        * np.prod(np.array(self.mesh.size))
+                        / self.n_seed_sds
+                    )
+
                     # randomly select a SD candidate to be the potential seed; tolerance set to half the seed radius
                     potseed_arr = np.where(
                         np.abs(
                             self.particulator.attributes["radius"].data - self.r_seed
                         )
-                        < self.r_seed / 2
+                        < self.r_seed * tol
                     )[0]
                     potindx_arr = np.where(
                         (
@@ -311,17 +318,19 @@ class Simulation:
                     # find all SDs in the same cell as the potential seed
                     npotseed_arr = np.where(ncell_arr == ncell_arr[potseed])[0]
                     npotseed_arr = npotseed_arr[npotseed_arr != potseed]
+                    reseed_indx = np.argmin(
+                        np.abs(
+                            self.particulator.attributes["radius"].data[npotseed_arr]
+                            - self.r_seed
+                        )
+                    )
 
                     # update the attributes of the potential seed and the other SDs in the same cell
                     # critical update step is conserving the water mass; thus the distributed water mass needs to be weighted by the multiplicity of the SDs
                     # if multiplicity of all neighboring SDs is increased by redistributing the donor SD's multipilicity, there is a distinct seeding signal, however that's not physically consistent
-                    gamma_fac = (
-                        self.particulator.attributes["multiplicity"].data[potseed]
-                        / self.particulator.attributes["multiplicity"].data[
-                            npotseed_arr
-                        ]
-                    ).astype(int)
-                    gamma_fac[gamma_fac == 0] = 1
+                    self.particulator.attributes["multiplicity"].data[
+                        reseed_indx
+                    ] += self.particulator.attributes["multiplicity"].data[potseed]
                     self.particulator.attributes["multiplicity"].data[
                         potseed
                     ] = self.m_param
@@ -331,24 +340,19 @@ class Simulation:
                         self.particulator.attributes["dry volume"].data[potseed]
                         * self.kappa_seed
                     )
-                    self.particulator.attributes["water mass"].data[npotseed_arr] += (
-                        gamma_fac
-                        * self.particulator.attributes["water mass"].data[potseed]
-                        / len(npotseed_arr)
+
+                elif seeding_type == "aggregate":
+                    self.n_seed_sds = self.n_sd_per_mode[1] * self.nz
+                    self.m_param = (
+                        self.int_inj_rate
+                        * np.prod(np.array(self.mesh.size))
+                        / self.n_seed_sds
                     )
-                    self.particulator.attributes["water mass"].data[potseed] = (
-                        self.particulator.attributes["water mass"].data[potseed]
-                        / len(npotseed_arr)
-                    )
-                except:
-                    # ramdomly select a SD candidate to be the potential seed; tolerance increased to the seed radius
+
                     potseed_arr = np.where(
-                        np.abs(
-                            self.particulator.attributes["radius"].data - self.r_seed
-                        )
-                        < self.r_seed
+                        self.particulator.attributes["kappa"].data == self.kappa_seed
                     )[0]
-                    potseed_arr = np.where(
+                    potindx_arr = np.where(
                         (
                             self.particulator.attributes["position in cell"].data[
                                 0, potseed_arr
@@ -362,36 +366,12 @@ class Simulation:
                             <= self.seed_z_part[1]
                         )
                     )[0]
-                    potseed = np.random.choice(potseed_arr[potindx_arr], 1)[0]
 
-                    npotseed_arr = np.where(ncell_arr == ncell_arr[potseed])[0]
-                    npotseed_arr = npotseed_arr[npotseed_arr != potseed]
-
-                    gamma_fac = (
-                        self.particulator.attributes["multiplicity"].data[potseed]
-                        / self.particulator.attributes["multiplicity"].data[
-                            npotseed_arr
-                        ]
-                    ).astype(int)
-                    gamma_fac[gamma_fac == 0] = 1
                     self.particulator.attributes["multiplicity"].data[
-                        potseed
-                    ] = self.m_param
-                    self.particulator.attributes["kappa times dry volume"].data[
-                        potseed
-                    ] = (
-                        self.particulator.attributes["dry volume"].data[potseed]
-                        * self.kappa_seed
-                    )
-                    self.particulator.attributes["water mass"].data[npotseed_arr] += (
-                        gamma_fac
-                        * self.particulator.attributes["water mass"].data[potseed]
-                        / len(npotseed_arr)
-                    )
-                    self.particulator.attributes["water mass"].data[potseed] = (
-                        self.particulator.attributes["water mass"].data[potseed]
-                        / len(npotseed_arr)
-                    )
+                        potindx_arr
+                    ] += self.m_param
+                else:
+                    continue
 
             self.mpdata.update_advector_field()
             if "Displacement" in self.particulator.dynamics:
