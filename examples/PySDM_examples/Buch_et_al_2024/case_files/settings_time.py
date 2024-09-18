@@ -182,7 +182,16 @@ class Settings:
 
     @property
     def n_sd(self):
-        return self.nz * self.n_sd_sum  # include zpart for seeded aerosols
+        return sum(
+            [
+                int(
+                    self.nz
+                    * self.n_sd_per_mode[i]
+                    * (self.z_part[i][1] - self.z_part[i][0])
+                )
+                for i in range(len(self.n_sd_per_mode))
+            ]
+        )
 
     @property
     def nz(self):

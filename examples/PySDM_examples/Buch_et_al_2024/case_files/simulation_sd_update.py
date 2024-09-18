@@ -33,6 +33,7 @@ class Simulation:
         self.int_inj_rate = settings.int_inj_rate
         self.n_seed_sds = settings.n_seed_sds
         self.seed_z_part = settings.seed_z_part
+        self.seeded_arr = None
 
         self.output_attributes = None
         self.output_products = None
@@ -138,6 +139,12 @@ class Simulation:
                 radius_range=settings.cloud_water_radius_range
             ),
             PySDM_products.SuperDropletCountPerGridbox(),
+            PySDM_products.NumberSizeSpectrum(
+                name="N(v)", radius_bins_edges=settings.r_bins_edges
+            ),
+            PySDM_products.ParticleVolumeVersusRadiusLogarithmSpectrum(
+                name="dvdlnr", radius_bins_edges=settings.r_bins_edges
+            ),
             PySDM_products.AveragedTerminalVelocity(
                 name="rain averaged terminal velocity",
                 radius_range=settings.rain_water_radius_range,
@@ -275,7 +282,7 @@ class Simulation:
         output_results = Outputs(self.output_products, self.output_attributes)
         return output_results
 
-    def stepwise_sd_update(self, seed_step=[], seeding_type="delta", tol=0.5):
+    def stepwise_sd_update(self, seed_step=[], seeding_type=None, tol=0.5):
 
         cell_edge_arr = np.linspace(
             self.particulator.attributes["position in cell"].data[0, :].min(),
@@ -353,7 +360,11 @@ class Simulation:
                     )
 
                 elif seeding_type == "aggregate":
-                    self.n_seed_sds = self.n_sd_per_mode[1] * self.nz
+                    self.n_seed_sds = int(
+                        self.n_sd_per_mode[1]
+                        * self.nz
+                        * (self.seed_z_part[1] - self.seed_z_part[0])
+                    )
                     self.m_param = (
                         self.int_inj_rate
                         * np.prod(np.array(self.mesh.size))
@@ -362,23 +373,24 @@ class Simulation:
 
                     potseed_arr = np.where(
                         self.particulator.attributes["kappa"].data
-                        > self.kappa_seed * tol
+                        > (self.kappa_seed - 0.05)  # * tol
                     )[0]
                     potindx_arr = np.where(
                         (
-                            self.particulator.attributes["position in cell"].data[
-                                0, potseed_arr
-                            ]
-                            > self.seed_z_part[0]
+                            self.particulator.attributes["cell id"].data[potseed_arr]
+                            > int(self.nz * self.seed_z_part[0])
                         )
                         & (
-                            self.particulator.attributes["position in cell"].data[
-                                0, potseed_arr
-                            ]
-                            <= self.seed_z_part[1]
+                            self.particulator.attributes["cell id"].data[potseed_arr]
+                            < int(self.nz * self.seed_z_part[1])
+                        )
+                        & (
+                            self.particulator.attributes["radius"].data[potseed_arr]
+                            < self.r_seed / tol
                         )
                     )[0]
 
+                    self.seeded_arr = potseed_arr
                     self.particulator.attributes["multiplicity"].data[
                         potindx_arr
                     ] += int(self.m_param)

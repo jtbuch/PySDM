@@ -66,7 +66,7 @@ class Kinematic1D(Moist):
                 positions = spatial_discretisation.sample(
                     backend=self.particulator.backend,
                     grid=self.mesh.grid,
-                    n_sd=n_sd_per_mode[i] * nz_tot,
+                    n_sd=int(n_sd_per_mode[i] * nz_tot * (z_part[i][1] - z_part[i][0])),
                     z_part=z_part[i],
                 )
 
@@ -85,15 +85,18 @@ class Kinematic1D(Moist):
                     sampling = ConstantMultiplicity(spectrum)
                     v_wet, n_per_kg = sampling.sample(
                         backend=self.particulator.backend,
-                        n_sd=n_sd_per_mode[i] * nz_tot,
+                        n_sd=int(
+                            n_sd_per_mode[i] * nz_tot * (z_part[i][1] - z_part[i][0])
+                        ),
                     )
                     attributes["volume"] = v_wet
                 else:
                     sampling = ConstantMultiplicity(spectrum)
                     r_dry, n_per_kg = sampling.sample(
                         backend=self.particulator.backend,
-                        n_sd=n_sd_per_mode[i]
-                        * nz_tot,  # include zpart for seeded aerosols
+                        n_sd=int(
+                            n_sd_per_mode[i] * nz_tot * (z_part[i][1] - z_part[i][0])
+                        ),
                     )
                     v_dry = self.formulae.trivia.volume(radius=r_dry)
                     attributes["dry volume"] = np.append(
