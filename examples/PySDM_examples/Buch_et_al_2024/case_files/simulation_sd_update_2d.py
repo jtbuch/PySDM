@@ -64,13 +64,7 @@ class Simulation:
                 **kwargs,
             )
             builder.add_dynamic(condensation)
-        displacement = None
-        if self.settings.processes["particle advection"]:
-            displacement = Displacement(
-                enable_sedimentation=self.settings.processes["sedimentation"],
-                adaptive=self.settings.displacement_adaptive,
-                rtol=self.settings.displacement_rtol,
-            )
+
         if self.settings.processes["fluid advection"]:
             initial_profiles = {
                 "th": self.settings.initial_dry_potential_temperature_profile,
@@ -79,7 +73,11 @@ class Simulation:
             advectees = dict(
                 (
                     key,
-                    np.repeat(profile.reshape(1, -1), environment.mesh.grid[0], axis=0),
+                    np.repeat(
+                        profile.reshape(1, -1),
+                        builder.particulator.environment.mesh.grid[0],
+                        axis=0,
+                    ),
                 )
                 for key, profile in initial_profiles.items()
             )
@@ -90,7 +88,6 @@ class Simulation:
                 dt=self.settings.dt,
                 grid=self.settings.grid,
                 size=self.settings.size,
-                displacement=displacement,
                 n_iters=self.settings.mpdata_iters,
                 infinite_gauge=self.settings.mpdata_iga,
                 nonoscillatory=self.settings.mpdata_fct,
@@ -98,7 +95,13 @@ class Simulation:
             )
             builder.add_dynamic(EulerianAdvection(solver))
         if self.settings.processes["particle advection"]:
-            builder.add_dynamic(displacement)
+            builder.add_dynamic(
+                Displacement(
+                    enable_sedimentation=self.settings.processes["sedimentation"],
+                    adaptive=self.settings.displacement_adaptive,
+                    rtol=self.settings.displacement_rtol,
+                )
+            )
         if (
             self.settings.processes["coalescence"]
             and self.settings.processes["breakup"]
@@ -141,7 +144,7 @@ class Simulation:
                 )
             )
 
-        attributes = environment.init_attributes(
+        attributes = builder.particulator.environment.init_attributes(
             spatial_discretisation=Pseudorandom(),
             n_sd_per_mode=self.settings.n_sd_per_mode,
             aerosol_modes_by_kappa=self.settings.aerosol_modes_by_kappa,

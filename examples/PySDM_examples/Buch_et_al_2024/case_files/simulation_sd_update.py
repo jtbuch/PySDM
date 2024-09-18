@@ -4,20 +4,18 @@ import numpy as np
 from PySDM_examples.Shipway_and_Hill_2012.mpdata_1d import MPDATA_1D
 
 import PySDM.products as PySDM_products
-from PySDM.builder import Builder
+from PySDM import Builder
 from PySDM.backends import CPU
 from PySDM.dynamics import (
     AmbientThermodynamics,
-    Condensation,
     Coalescence,
+    Condensation,
     Displacement,
     EulerianAdvection,
 )
 from utils.kinematic_1d_bimodal import Kinematic1D
 from PySDM.impl.mesh import Mesh
-from PySDM.initialisation.sampling import spectral_sampling
 from PySDM.initialisation.sampling.spatial_sampling import Pseudorandom
-from PySDM.physics import si
 
 
 class Simulation:
@@ -25,25 +23,27 @@ class Simulation:
         self.nt = settings.nt
         self.nz = settings.nz
         self.z0 = -settings.particle_reservoir_depth
+        self.n_sd_per_mode = settings.n_sd_per_mode
         self.save_spec_and_attr_times = settings.save_spec_and_attr_times
         self.number_of_bins = settings.number_of_bins
 
         self.particulator = None
-        self.output_attributes = None
-        self.output_products = None
-        self.n_seed_sds = settings.n_seed_sds
         self.r_seed = settings.r_seed
         self.kappa_seed = settings.kappa_seed
-        self.m_param = settings.m_param
+        self.int_inj_rate = settings.int_inj_rate
+        self.n_seed_sds = settings.n_seed_sds
         self.seed_z_part = settings.seed_z_part
-        self.seed_step = int(settings.t_part[1] / settings.dt)
+        self.seeded_arr = None
+
+        self.output_attributes = None
+        self.output_products = None
 
         self.mesh = Mesh(
             grid=(settings.nz,),
             size=(settings.z_max + settings.particle_reservoir_depth,),
         )
 
-        self.env = Kinematic1D(
+        env = Kinematic1D(
             dt=settings.dt,
             mesh=self.mesh,
             thd_of_z=settings.thd,
@@ -55,7 +55,7 @@ class Simulation:
             z_above_reservoir = zZ * (settings.nz * settings.dz) + self.z0
             return z_above_reservoir
 
-        self.mpdata = MPDATA_1D(
+        mpdata = MPDATA_1D(
             nz=settings.nz,
             dt=settings.dt,
             mpdata_settings=settings.mpdata_settings,
@@ -75,7 +75,7 @@ class Simulation:
         self.builder = Builder(
             n_sd=settings.n_sd,
             backend=backend(formulae=settings.formulae),
-            environment=self.env,
+            environment=env,
         )
         self.builder.add_dynamic(AmbientThermodynamics())
 
@@ -88,7 +88,7 @@ class Simulation:
                     update_thd=settings.condensation_update_thd,
                 )
             )
-        self.builder.add_dynamic(EulerianAdvection(self.mpdata))
+        self.builder.add_dynamic(EulerianAdvection(mpdata))
 
         self.products = []
         if settings.precip:
@@ -101,9 +101,7 @@ class Simulation:
             ),
         )
         self.builder.add_dynamic(displacement)
-
-        # Moving spectral sampling by components to kinematic_1d_bimodal.py
-        self.attributes = self.env.init_attributes(
+        self.attributes = self.builder.particulator.environment.init_attributes(
             spatial_discretisation=Pseudorandom(),
             n_sd_per_mode=settings.n_sd_per_mode,
             nz_tot=settings.nz,
@@ -147,6 +145,16 @@ class Simulation:
             PySDM_products.ParticleVolumeVersusRadiusLogarithmSpectrum(
                 name="dvdlnr", radius_bins_edges=settings.r_bins_edges
             ),
+            PySDM_products.AveragedTerminalVelocity(
+                name="rain averaged terminal velocity",
+                radius_range=settings.rain_water_radius_range,
+            ),
+            PySDM_products.AmbientRelativeHumidity(name="RH", unit="%"),
+            PySDM_products.AmbientPressure(name="p"),
+            PySDM_products.AmbientTemperature(name="T"),
+            PySDM_products.AmbientWaterVapourMixingRatio(
+                name="water_vapour_mixing_ratio"
+            ),
         ]
         if settings.enable_condensation:
             self.products.extend(
@@ -174,6 +182,7 @@ class Simulation:
                     PySDM_products.CoalescenceRatePerGridbox(
                         name="coalescence_rate",
                     ),
+                    PySDM_products.SurfacePrecipitation(),
                 ]
             )
         self.particulator = self.builder.build(
@@ -188,13 +197,17 @@ class Simulation:
         }
         self.output_products = {}
         for k, v in self.particulator.products.items():
-            if len(v.shape) == 1:
+            if len(v.shape) == 0:
+                self.output_products[k] = np.zeros(self.nt + 1)
+            elif len(v.shape) == 1:
                 self.output_products[k] = np.zeros((self.mesh.grid[-1], self.nt + 1))
             elif len(v.shape) == 2:
                 number_of_time_sections = len(self.save_spec_and_attr_times)
                 self.output_products[k] = np.zeros(
                     (self.mesh.grid[-1], self.number_of_bins, number_of_time_sections)
                 )
+
+        assert "t" not in self.output_products and "z" not in self.output_products
         self.output_products["t"] = np.linspace(
             0, self.nt * self.particulator.dt, self.nt + 1, endpoint=True
         )
@@ -218,7 +231,10 @@ class Simulation:
         for k, v in self.particulator.products.items():
             if len(v.shape) > 1:
                 continue
-            self.output_products[k][:, step] = v.get()
+            if len(v.shape) == 1:
+                self.output_products[k][:, step] = v.get()
+            else:
+                self.output_products[k][step] = v.get()
 
     def save_spectrum(self, index):
         for k, v in self.particulator.products.items():
@@ -251,11 +267,13 @@ class Simulation:
             self.save_attributes()
 
     def run(self):
-        for step in range(self.nt - self.particulator.n_steps):
-            self.mpdata.update_advector_field()
+        self.save(0)
+        for step in range(self.nt):
+            mpdata = self.particulator.dynamics["EulerianAdvection"].solvers
+            mpdata.update_advector_field()
             if "Displacement" in self.particulator.dynamics:
                 self.particulator.dynamics["Displacement"].upload_courant_field(
-                    (self.mpdata.advector / self.g_factor_vec,)
+                    (mpdata.advector / self.g_factor_vec,)
                 )
             self.particulator.run(steps=1)
             self.save(step + 1)
@@ -264,7 +282,7 @@ class Simulation:
         output_results = Outputs(self.output_products, self.output_attributes)
         return output_results
 
-    def stepwise_sd_update(self, seed_step):
+    def stepwise_sd_update(self, seed_step=[], seeding_type=None, tol=0.5):
 
         cell_edge_arr = np.linspace(
             self.particulator.attributes["position in cell"].data[0, :].min(),
@@ -284,13 +302,20 @@ class Simulation:
         for i in range(self.nt):
 
             if i in seed_step:
-                try:
+                if seeding_type == "delta":
+                    self.n_seed_sds = 1
+                    self.m_param = (
+                        self.int_inj_rate
+                        * np.prod(np.array(self.mesh.size))
+                        / self.n_seed_sds
+                    )
+
                     # randomly select a SD candidate to be the potential seed; tolerance set to half the seed radius
                     potseed_arr = np.where(
                         np.abs(
                             self.particulator.attributes["radius"].data - self.r_seed
                         )
-                        < self.r_seed / 2
+                        < self.r_seed * tol
                     )[0]
                     potindx_arr = np.where(
                         (
@@ -311,17 +336,19 @@ class Simulation:
                     # find all SDs in the same cell as the potential seed
                     npotseed_arr = np.where(ncell_arr == ncell_arr[potseed])[0]
                     npotseed_arr = npotseed_arr[npotseed_arr != potseed]
+                    reseed_indx = np.argmin(
+                        np.abs(
+                            self.particulator.attributes["radius"].data[npotseed_arr]
+                            - self.r_seed
+                        )
+                    )
 
                     # update the attributes of the potential seed and the other SDs in the same cell
                     # critical update step is conserving the water mass; thus the distributed water mass needs to be weighted by the multiplicity of the SDs
                     # if multiplicity of all neighboring SDs is increased by redistributing the donor SD's multipilicity, there is a distinct seeding signal, however that's not physically consistent
-                    gamma_fac = (
-                        self.particulator.attributes["multiplicity"].data[potseed]
-                        / self.particulator.attributes["multiplicity"].data[
-                            npotseed_arr
-                        ]
-                    ).astype(int)
-                    gamma_fac[gamma_fac == 0] = 1
+                    self.particulator.attributes["multiplicity"].data[
+                        reseed_indx
+                    ] += self.particulator.attributes["multiplicity"].data[potseed]
                     self.particulator.attributes["multiplicity"].data[
                         potseed
                     ] = self.m_param
@@ -331,72 +358,50 @@ class Simulation:
                         self.particulator.attributes["dry volume"].data[potseed]
                         * self.kappa_seed
                     )
-                    self.particulator.attributes["water mass"].data[npotseed_arr] += (
-                        gamma_fac
-                        * self.particulator.attributes["water mass"].data[potseed]
-                        / len(npotseed_arr)
+
+                elif seeding_type == "aggregate":
+                    self.n_seed_sds = int(
+                        self.n_sd_per_mode[1]
+                        * self.nz
+                        * (self.seed_z_part[1] - self.seed_z_part[0])
                     )
-                    self.particulator.attributes["water mass"].data[potseed] = (
-                        self.particulator.attributes["water mass"].data[potseed]
-                        / len(npotseed_arr)
+                    self.m_param = (
+                        self.int_inj_rate
+                        * np.prod(np.array(self.mesh.size))
+                        / self.n_seed_sds
                     )
-                except:
-                    # ramdomly select a SD candidate to be the potential seed; tolerance increased to the seed radius
+
                     potseed_arr = np.where(
-                        np.abs(
-                            self.particulator.attributes["radius"].data - self.r_seed
-                        )
-                        < self.r_seed
+                        self.particulator.attributes["kappa"].data
+                        > (self.kappa_seed - 0.05)  # * tol
                     )[0]
-                    potseed_arr = np.where(
+                    potindx_arr = np.where(
                         (
-                            self.particulator.attributes["position in cell"].data[
-                                0, potseed_arr
-                            ]
-                            > self.seed_z_part[0]
+                            self.particulator.attributes["cell id"].data[potseed_arr]
+                            > int(self.nz * self.seed_z_part[0])
                         )
                         & (
-                            self.particulator.attributes["position in cell"].data[
-                                0, potseed_arr
-                            ]
-                            <= self.seed_z_part[1]
+                            self.particulator.attributes["cell id"].data[potseed_arr]
+                            < int(self.nz * self.seed_z_part[1])
+                        )
+                        & (
+                            self.particulator.attributes["radius"].data[potseed_arr]
+                            < self.r_seed / tol
                         )
                     )[0]
-                    potseed = np.random.choice(potseed_arr[potindx_arr], 1)[0]
 
-                    npotseed_arr = np.where(ncell_arr == ncell_arr[potseed])[0]
-                    npotseed_arr = npotseed_arr[npotseed_arr != potseed]
-
-                    gamma_fac = (
-                        self.particulator.attributes["multiplicity"].data[potseed]
-                        / self.particulator.attributes["multiplicity"].data[
-                            npotseed_arr
-                        ]
-                    ).astype(int)
-                    gamma_fac[gamma_fac == 0] = 1
+                    self.seeded_arr = potseed_arr
                     self.particulator.attributes["multiplicity"].data[
-                        potseed
-                    ] = self.m_param
-                    self.particulator.attributes["kappa times dry volume"].data[
-                        potseed
-                    ] = (
-                        self.particulator.attributes["dry volume"].data[potseed]
-                        * self.kappa_seed
-                    )
-                    self.particulator.attributes["water mass"].data[npotseed_arr] += (
-                        gamma_fac
-                        * self.particulator.attributes["water mass"].data[potseed]
-                        / len(npotseed_arr)
-                    )
-                    self.particulator.attributes["water mass"].data[potseed] = (
-                        self.particulator.attributes["water mass"].data[potseed]
-                        / len(npotseed_arr)
-                    )
+                        potindx_arr
+                    ] += int(self.m_param)
+                else:
+                    continue
 
-            self.mpdata.update_advector_field()
+            mpdata = self.particulator.dynamics["EulerianAdvection"].solvers
+            mpdata.update_advector_field()
             if "Displacement" in self.particulator.dynamics:
                 self.particulator.dynamics["Displacement"].upload_courant_field(
-                    (self.mpdata.advector / self.g_factor_vec,)
+                    (mpdata.advector / self.g_factor_vec,)
                 )
             self.particulator.run(steps=1)
 

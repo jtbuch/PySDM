@@ -6,13 +6,13 @@ Single-column time-varying-updraft framework with moisture advection handled by
 import numpy as np
 
 from PySDM.environments.impl.moist import Moist
-
 from PySDM.impl import arakawa_c
-from PySDM import Formulae
-from PySDM.initialisation.sampling.spectral_sampling import ConstantMultiplicity
 from PySDM.initialisation.equilibrate_wet_radii import equilibrate_wet_radii
+from PySDM.initialisation.sampling.spectral_sampling import ConstantMultiplicity
+from PySDM.environments.impl import register_environment
 
 
+@register_environment()
 class Kinematic1D(Moist):
     def __init__(self, *, dt, mesh, thd_of_z, rhod_of_z, z0=0):
         super().__init__(dt, mesh, [])
@@ -28,7 +28,7 @@ class Kinematic1D(Moist):
         self._tmp["rhod"] = rhod
 
     def get_water_vapour_mixing_ratio(self) -> np.ndarray:
-        return self.particulator.dynamics["EulerianAdvection"].solvers.advectee.get()
+        return self.particulator.dynamics["EulerianAdvection"].solvers.advectee
 
     def get_thd(self) -> np.ndarray:
         return self.thd0
@@ -66,9 +66,9 @@ class Kinematic1D(Moist):
                 positions = spatial_discretisation.sample(
                     backend=self.particulator.backend,
                     grid=self.mesh.grid,
-                    n_sd=n_sd_per_mode[i] * nz_tot,
+                    n_sd=int(n_sd_per_mode[i] * nz_tot * (z_part[i][1] - z_part[i][0])),
                     z_part=z_part[i],
-                )  # self.particulator.n_sd
+                )
 
                 cell_id, cell_origin, pos_cell = self.mesh.cellular_attributes(
                     positions
@@ -85,17 +85,18 @@ class Kinematic1D(Moist):
                     sampling = ConstantMultiplicity(spectrum)
                     v_wet, n_per_kg = sampling.sample(
                         backend=self.particulator.backend,
-                        n_sd=n_sd_per_mode[i] * nz_tot,
+                        n_sd=int(
+                            n_sd_per_mode[i] * nz_tot * (z_part[i][1] - z_part[i][0])
+                        ),
                     )
-                    # attributes["dry volume"] = v_wet
                     attributes["volume"] = v_wet
-                    # attributes["kappa times dry volume"] = attributes["dry volume"] * kappa
                 else:
                     sampling = ConstantMultiplicity(spectrum)
                     r_dry, n_per_kg = sampling.sample(
                         backend=self.particulator.backend,
-                        n_sd=n_sd_per_mode[i]
-                        * nz_tot,  # include zpart for seeded aerosols
+                        n_sd=int(
+                            n_sd_per_mode[i] * nz_tot * (z_part[i][1] - z_part[i][0])
+                        ),
                     )
                     v_dry = self.formulae.trivia.volume(radius=r_dry)
                     attributes["dry volume"] = np.append(

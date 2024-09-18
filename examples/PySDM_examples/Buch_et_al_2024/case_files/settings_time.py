@@ -26,12 +26,11 @@ class Settings:
             "z_max",
             "z_part",
             "t_max",
-            "n_seed_sds",
             "r_seed",
             "kappa_seed",
-            "m_param",
+            "int_inj_rate",
+            "n_seed_sds",
             "seed_z_part",
-            "t_part",
             "save_spec_and_attr_times",
             "cloud_water_radius_range",
             "rain_water_radius_range",
@@ -51,12 +50,11 @@ class Settings:
         z_max: float = 3000 * si.m,
         z_part: Optional[tuple] = None,
         t_max: float = 60 * si.minutes,
-        n_seed_sds: Optional[int] = 1,
         r_seed: Optional[float] = 1 * si.um,
         kappa_seed: Optional[float] = 0.85,
-        m_param: Optional[float] = 1e9,
+        int_inj_rate: Optional[float] = None,
+        n_seed_sds: Optional[float] = None,
         seed_z_part: Optional[tuple] = None,
-        t_part: Optional[tuple] = None,
         precip: bool = True,
         enable_condensation: bool = True,
         formulae: Formulae = None,
@@ -77,12 +75,11 @@ class Settings:
         self.z_part = z_part
         self.z_max = z_max
         self.t_max = t_max
-        self.n_seed_sds = n_seed_sds
         self.r_seed = r_seed
         self.kappa_seed = kappa_seed
-        self.m_param = m_param
+        self.int_inj_rate = int_inj_rate
+        self.n_seed_sds = n_seed_sds
         self.seed_z_part = seed_z_part
-        self.t_part = t_part
         self.save_spec_and_attr_times = save_spec_and_attr_times
         self.collision_kernel = collision_kernel or Geometric(collection_efficiency=1)
 
@@ -185,7 +182,16 @@ class Settings:
 
     @property
     def n_sd(self):
-        return self.nz * self.n_sd_sum  # include zpart for seeded aerosols
+        return sum(
+            [
+                int(
+                    self.nz
+                    * self.n_sd_per_mode[i]
+                    * (self.z_part[i][1] - self.z_part[i][0])
+                )
+                for i in range(len(self.n_sd_per_mode))
+            ]
+        )
 
     @property
     def nz(self):
