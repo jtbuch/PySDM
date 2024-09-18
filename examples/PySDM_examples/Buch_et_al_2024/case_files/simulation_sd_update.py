@@ -373,7 +373,7 @@ class Simulation:
 
                     potseed_arr = np.where(
                         self.particulator.attributes["kappa"].data
-                        > (self.kappa_seed - 0.05)  # * tol
+                        > (self.kappa_seed - 0.05)
                     )[0]
                     potindx_arr = np.where(
                         (
@@ -390,7 +390,7 @@ class Simulation:
                         )
                     )[0]
 
-                    self.seeded_arr = potseed_arr
+                    self.seeded_arr = np.random.choice(potseed_arr, self.n_seed_sds)
                     self.particulator.attributes["multiplicity"].data[
                         potindx_arr
                     ] += int(self.m_param)
