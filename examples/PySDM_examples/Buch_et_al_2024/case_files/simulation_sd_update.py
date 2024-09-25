@@ -365,16 +365,20 @@ class Simulation:
                         * self.nz
                         * (self.seed_z_part[1] - self.seed_z_part[0])
                     )
+                    self.n_seed_sds_step = int(self.n_seed_sds / len(seed_step))
                     self.m_param = (
                         self.int_inj_rate
                         * np.prod(np.array(self.mesh.size))
                         / self.n_seed_sds
                     )
 
+                    # choose potential seed SDs based on kappa
                     potseed_arr = np.where(
                         self.particulator.attributes["kappa"].data
                         > (self.kappa_seed - 0.05)
                     )[0]
+
+                    # narrow potential seed SDs based on cell id and radius
                     potindx_arr = np.where(
                         (
                             self.particulator.attributes["cell id"].data[potseed_arr]
@@ -390,9 +394,24 @@ class Simulation:
                         )
                     )[0]
 
-                    self.seeded_arr = np.random.choice(potseed_arr, self.n_seed_sds)
+                    # randomly select a subset of potential seed SDs depending on number of steps
+                    if self.seeded_arr is None:
+                        seed_indx_arr = np.random.choice(
+                            potindx_arr, self.n_seed_sds_step
+                        )
+                        self.seeded_arr = seed_indx_arr
+                    else:
+                        seed_indx_arr = np.random.choice(
+                            np.setdiff1d(potindx_arr, self.seeded_arr),
+                            self.n_seed_sds_step,
+                        )
+                        self.seeded_arr = np.concatenate(
+                            (self.seeded_arr, seed_indx_arr)
+                        )
+
+                    # increase the multiplicities of the selected SDs
                     self.particulator.attributes["multiplicity"].data[
-                        potindx_arr
+                        seed_indx_arr
                     ] += int(self.m_param)
                 else:
                     continue
