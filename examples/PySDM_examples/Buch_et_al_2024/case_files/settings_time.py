@@ -30,7 +30,8 @@ class Settings:
             "kappa_seed",
             "int_inj_rate",
             "n_seed_sds",
-            "seed_z_part",
+            "seed_z_step",
+            "seed_t_step",
             "save_spec_and_attr_times",
             "cloud_water_radius_range",
             "rain_water_radius_range",
@@ -54,7 +55,8 @@ class Settings:
         kappa_seed: Optional[float] = 0.85,
         int_inj_rate: Optional[float] = None,
         n_seed_sds: Optional[float] = None,
-        seed_z_part: Optional[tuple] = None,
+        seed_z_step: Optional[tuple] = None,
+        seed_t_step: Optional[tuple] = None,
         precip: bool = True,
         enable_condensation: bool = True,
         formulae: Formulae = None,
@@ -79,7 +81,8 @@ class Settings:
         self.kappa_seed = kappa_seed
         self.int_inj_rate = int_inj_rate
         self.n_seed_sds = n_seed_sds
-        self.seed_z_part = seed_z_part
+        self.seed_z_step = seed_z_step
+        self.seed_t_step = seed_t_step
         self.save_spec_and_attr_times = save_spec_and_attr_times
         self.collision_kernel = collision_kernel or Geometric(collection_efficiency=1)
 

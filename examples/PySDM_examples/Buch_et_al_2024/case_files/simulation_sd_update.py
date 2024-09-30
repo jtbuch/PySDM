@@ -32,7 +32,9 @@ class Simulation:
         self.kappa_seed = settings.kappa_seed
         self.int_inj_rate = settings.int_inj_rate
         self.n_seed_sds = settings.n_seed_sds
-        self.seed_z_part = settings.seed_z_part
+        self.z_part = settings.z_part
+        self.seed_z_step = settings.seed_z_step
+        self.seed_t_step = settings.seed_t_step
         self.seeded_arr = None
 
         self.output_attributes = None
@@ -282,7 +284,7 @@ class Simulation:
         output_results = Outputs(self.output_products, self.output_attributes)
         return output_results
 
-    def stepwise_sd_update(self, seed_step=[], seeding_type=None, tol=0.5):
+    def stepwise_sd_update(self, seeding_type=None, tol=0.5):
 
         cell_edge_arr = np.linspace(
             self.particulator.attributes["position in cell"].data[0, :].min(),
@@ -301,15 +303,31 @@ class Simulation:
 
         for i in range(self.nt):
 
-            if i in seed_step:
+            if seeding_type is not None:
+                seed_count = 0
                 if seeding_type == "delta":
                     self.n_seed_sds = 1
-                    self.m_param = (
-                        self.int_inj_rate
-                        * np.prod(np.array(self.mesh.size))
-                        / self.n_seed_sds
+                elif seeding_type == "aggregate":
+                    self.n_seed_sds = int(
+                        self.n_sd_per_mode[
+                            1
+                        ]  # fix index for multiple background and seed populations
+                        * self.nz
+                        * (
+                            self.z_part[1][1] - self.z_part[1][0]
+                        )  # fix index for multiple background and seed populations
                     )
+                    self.n_seed_sds_step = int(self.n_seed_sds / len(self.seed_t_step))
+                self.m_param = (
+                    self.int_inj_rate
+                    * np.prod(np.array(self.mesh.size))
+                    / self.n_seed_sds
+                )
+            else:
+                continue
 
+            if i in self.seed_t_step:
+                if seeding_type == "delta":
                     # randomly select a SD candidate to be the potential seed; tolerance set to half the seed radius
                     potseed_arr = np.where(
                         np.abs(
@@ -322,13 +340,13 @@ class Simulation:
                             self.particulator.attributes["position in cell"].data[
                                 0, potseed_arr
                             ]
-                            > self.seed_z_part[0]
+                            > self.seed_z_step[seed_count][0]
                         )
                         & (
                             self.particulator.attributes["position in cell"].data[
                                 0, potseed_arr
                             ]
-                            <= self.seed_z_part[1]
+                            <= self.seed_z_step[seed_count][1]
                         )
                     )[0]
                     potseed = np.random.choice(potseed_arr[potindx_arr], 1)[0]
@@ -358,20 +376,9 @@ class Simulation:
                         self.particulator.attributes["dry volume"].data[potseed]
                         * self.kappa_seed
                     )
+                    seed_count += 1
 
                 elif seeding_type == "aggregate":
-                    self.n_seed_sds = int(
-                        self.n_sd_per_mode[1]
-                        * self.nz
-                        * (self.seed_z_part[1] - self.seed_z_part[0])
-                    )
-                    self.n_seed_sds_step = int(self.n_seed_sds / len(seed_step))
-                    self.m_param = (
-                        self.int_inj_rate
-                        * np.prod(np.array(self.mesh.size))
-                        / self.n_seed_sds
-                    )
-
                     # choose potential seed SDs based on kappa
                     potseed_arr = np.where(
                         self.particulator.attributes["kappa"].data
@@ -382,11 +389,11 @@ class Simulation:
                     potindx_arr = np.where(
                         (
                             self.particulator.attributes["cell id"].data[potseed_arr]
-                            > int(self.nz * self.seed_z_part[0])
+                            > int(self.nz * self.seed_z_step[seed_count][0])
                         )
                         & (
                             self.particulator.attributes["cell id"].data[potseed_arr]
-                            < int(self.nz * self.seed_z_part[1])
+                            < int(self.nz * self.seed_z_step[seed_count][1])
                         )
                         & (
                             self.particulator.attributes["radius"].data[potseed_arr]
@@ -394,7 +401,7 @@ class Simulation:
                         )
                     )[0]
 
-                    # randomly select a subset of potential seed SDs depending on number of steps
+                    # randomly select a subset of potential seed SDs depending on number of steps ensuring each candidate seed is only selected once
                     if self.seeded_arr is None:
                         seed_indx_arr = np.random.choice(
                             potindx_arr, self.n_seed_sds_step
@@ -413,6 +420,7 @@ class Simulation:
                     self.particulator.attributes["multiplicity"].data[
                         seed_indx_arr
                     ] += int(self.m_param)
+                    seed_count += 1
                 else:
                     continue
 
