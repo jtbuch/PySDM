@@ -133,11 +133,15 @@ class Simulation:
             "kappa times dry volume": 0.8 * v_dry,  # include kappa argument for seeds
         }
         self.seeded_particle_cell_id = cell_id
+        self.seeded_particle_cell_origin = cell_origin
+        self.seeded_particle_pos_cell = pos_cell
         self.builder.add_dynamic(
             Seeding(
                 super_droplet_injection_rate=settings.super_droplet_injection_rate,
                 seeded_particle_multiplicity=self.seeded_particle_multiplicity,
                 seeded_particle_cell_id=self.seeded_particle_cell_id,
+                seeded_particle_cell_origin=self.seeded_particle_cell_origin,
+                seeded_particle_pos_cell=self.seeded_particle_pos_cell,
                 seeded_particle_extensive_attributes=self.seeded_particle_extensive_attributes,
             )
         )
