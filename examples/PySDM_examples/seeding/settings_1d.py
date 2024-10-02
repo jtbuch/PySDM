@@ -13,7 +13,7 @@ from PySDM.physics import si
 from PySDM.dynamics.collisions.collision_kernels import Geometric
 
 
-@strict
+# @strict
 class Settings:
     def __dir__(self) -> Iterable[str]:
         return (
@@ -179,7 +179,7 @@ class Settings:
 
     @property
     def n_sd(self):
-        return self.nz * self.n_sd_per_gridbox + self.n_sd_seeding
+        return self.nz * self.n_sd_per_gridbox
 
     @property
     def nz(self):

@@ -14,7 +14,7 @@ from PySDM.dynamics import (
     EulerianAdvection,
     Seeding,
 )
-from PySDM.environments.kinematic_1d import Kinematic1D
+from PySDM_examples.seeding.kinematic_1d_seeding import Kinematic1D
 from PySDM.impl.mesh import Mesh
 from PySDM.initialisation import spectra
 from PySDM.initialisation.sampling import spatial_sampling, spectral_sampling
@@ -67,7 +67,7 @@ class Simulation:
         self.g_factor_vec = settings.rhod(_z_vec)
 
         self.builder = Builder(
-            n_sd=settings.n_sd,
+            n_sd=settings.n_sd + settings.n_sd_seeding,
             backend=backend(formulae=settings.formulae),
             environment=env,
         )
@@ -103,43 +103,42 @@ class Simulation:
             ),
             kappa=settings.kappa,
             collisions_only=not settings.enable_condensation,
+            n_sd=settings.n_sd,  # only initialize with background SDs
             z_part=settings.z_part,
         )
         r_dry, n_in_dv = spectral_sampling.ConstantMultiplicity(
             spectra.Lognormal(
-                norm_factor=(settings.particles_per_volume_STP / 10)
-                / self.formulae.constants.rho_STP,
+                norm_factor=(settings.particles_per_volume_STP / 1)
+                / settings.formulae.constants.rho_STP,
                 m_mode=1 * si.um,
                 s_geom=1.4,
             )
         ).sample(
             n_sd=settings.n_sd_seeding
         )  # TODO #1387: does not have to be the same?
-        v_dry = self.formulae.trivia.volume(radius=r_dry)
-        self.seeded_particle_multiplicity = (
-            n_in_dv  # include scaling by domain volume for consistency
-        )
+        v_dry = settings.formulae.trivia.volume(radius=r_dry)
+        self.seeded_particle_multiplicity = n_in_dv * np.prod(
+            np.array(self.mesh.size)
+        )  # include scaling by domain volume for consistency
+
         positions = spatial_sampling.Pseudorandom().sample(
-            backend=self.particulator.backend,
+            backend=backend(formulae=settings.formulae),
             grid=self.mesh.grid,
             n_sd=settings.n_sd_seeding,
         )
-
         cell_id, cell_origin, pos_cell = self.mesh.cellular_attributes(positions)
         self.seeded_particle_extensive_attributes = {
-            "water mass": [0.0001 * si.ng] * settings.n_sd_seeding,
+            "water mass": np.array([0.0001 * si.ng] * settings.n_sd_seeding),
             "dry volume": v_dry,
             "kappa times dry volume": 0.8 * v_dry,  # include kappa argument for seeds
-            "cell id": cell_id,
-            "cell origin": cell_origin,
-            "position in cell": pos_cell,
         }
-
+        self.seeded_particle_cell_id = cell_id
         self.builder.add_dynamic(
             Seeding(
                 super_droplet_injection_rate=settings.super_droplet_injection_rate,
-                seeded_particle_multiplicity=settings.seeded_particle_multiplicity,
-                seeded_particle_extensive_attributes=settings.seeded_particle_extensive_attributes,
+                seeded_particle_multiplicity=self.seeded_particle_multiplicity,
+                seeded_particle_cell_id=self.seeded_particle_cell_id,
+                seeded_particle_extensive_attributes=self.seeded_particle_extensive_attributes,
             )
         )
 
@@ -217,7 +216,11 @@ class Simulation:
             attributes={
                 k: np.pad(
                     array=v,
-                    pad_width=(0, settings.n_sd_seeding),
+                    pad_width=(
+                        ((0, 0), (0, settings.n_sd_seeding))
+                        if k in ("position in cell", "cell origin")
+                        else (0, settings.n_sd_seeding)
+                    ),
                     mode="constant",
                     constant_values=np.nan if k == "multiplicity" else 0,
                 )

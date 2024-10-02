@@ -18,12 +18,14 @@ class Seeding:
         super_droplet_injection_rate: callable,
         seeded_particle_extensive_attributes: dict,
         seeded_particle_multiplicity: Sized,
+        seeded_particle_cell_id: Sized,
     ):
         for attr in seeded_particle_extensive_attributes.values():
             assert len(seeded_particle_multiplicity) == len(attr)
         self.particulator = None
         self.super_droplet_injection_rate = super_droplet_injection_rate
         self.seeded_particle_extensive_attributes = seeded_particle_extensive_attributes
+        self.seeded_particle_cell_id = seeded_particle_cell_id
         self.seeded_particle_multiplicity = seeded_particle_multiplicity
         self.rnd = None
         self.u01 = None
@@ -60,6 +62,10 @@ class Seeding:
                 ),
             )
         )
+        self.seeded_particle_cell_id = self.particulator.IndexedStorage.from_ndarray(
+            self.index,
+            np.asarray(self.seeded_particle_cell_id),
+        )
         self.seeded_particle_extensive_attributes = (
             self.particulator.IndexedStorage.from_ndarray(
                 self.index,
@@ -90,5 +96,6 @@ class Seeding:
                 seeded_particle_index=self.index,
                 number_of_super_particles_to_inject=number_of_super_particles_to_inject,
                 seeded_particle_multiplicity=self.seeded_particle_multiplicity,
+                seeded_particle_cell_id=self.seeded_particle_cell_id,
                 seeded_particle_extensive_attributes=self.seeded_particle_extensive_attributes,
             )
