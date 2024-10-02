@@ -18,6 +18,7 @@ from PySDM_examples.seeding.kinematic_1d_seeding import Kinematic1D
 from PySDM.impl.mesh import Mesh
 from PySDM.initialisation import spectra
 from PySDM.initialisation.sampling import spatial_sampling, spectral_sampling
+from PySDM.initialisation.equilibrate_wet_radii import equilibrate_wet_radii
 from PySDM.physics import si
 
 
@@ -117,9 +118,12 @@ class Simulation:
             n_sd=settings.n_sd_seeding
         )  # TODO #1387: does not have to be the same?
         v_dry = settings.formulae.trivia.volume(radius=r_dry)
-        self.seeded_particle_multiplicity = n_in_dv * np.prod(
-            np.array(self.mesh.size)
-        )  # include scaling by domain volume for consistency
+        self.seeded_particle_extensive_attributes = {
+            "water mass": np.array([0.0001 * si.ng] * settings.n_sd_seeding),
+            "dry volume": v_dry,
+            "kappa times dry volume": 0.8 * v_dry,  # include kappa argument for seeds
+        }
+        self.seeded_particle_multiplicity = n_in_dv * np.prod(np.array(self.mesh.size))
 
         positions = spatial_sampling.Pseudorandom().sample(
             backend=backend(formulae=settings.formulae),
@@ -127,14 +131,22 @@ class Simulation:
             n_sd=settings.n_sd_seeding,
         )
         cell_id, cell_origin, pos_cell = self.mesh.cellular_attributes(positions)
-        self.seeded_particle_extensive_attributes = {
-            "water mass": np.array([0.0001 * si.ng] * settings.n_sd_seeding),
-            "dry volume": v_dry,
-            "kappa times dry volume": 0.8 * v_dry,  # include kappa argument for seeds
-        }
         self.seeded_particle_cell_id = cell_id
         self.seeded_particle_cell_origin = cell_origin
         self.seeded_particle_pos_cell = pos_cell
+
+        r_wet = equilibrate_wet_radii(
+            r_dry=settings.formulae.trivia.radius(volume=v_dry),
+            environment=self.builder.particulator.environment,
+            cell_id=cell_id,
+            kappa_times_dry_volume=0.8 * v_dry,  # include kappa argument for seeds
+        )
+        self.seeded_particle_volume = settings.formulae.trivia.volume(radius=r_wet)
+        self.builder.particulator.backend.mass_of_water_volume(
+            self.seeded_particle_extensive_attributes["water mass"],
+            self.seeded_particle_volume,
+        )
+
         self.builder.add_dynamic(
             Seeding(
                 super_droplet_injection_rate=settings.super_droplet_injection_rate,
@@ -142,6 +154,7 @@ class Simulation:
                 seeded_particle_cell_id=self.seeded_particle_cell_id,
                 seeded_particle_cell_origin=self.seeded_particle_cell_origin,
                 seeded_particle_pos_cell=self.seeded_particle_pos_cell,
+                seeded_particle_volume=self.seeded_particle_volume,
                 seeded_particle_extensive_attributes=self.seeded_particle_extensive_attributes,
             )
         )

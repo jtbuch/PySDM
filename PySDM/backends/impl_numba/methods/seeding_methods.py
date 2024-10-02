@@ -17,6 +17,7 @@ class SeedingMethods(BackendMethods):  # pylint: disable=too-few-public-methods
             cell_id,
             cell_origin,
             pos_cell,
+            volume,
             extensive_attributes,
             seeded_particle_index,
             seeded_particle_multiplicity,
@@ -24,6 +25,7 @@ class SeedingMethods(BackendMethods):  # pylint: disable=too-few-public-methods
             seeded_particle_cell_origin,
             seeded_particle_pos_cell,
             seeded_particle_extensive_attributes,
+            seeded_particle_volume,
             number_of_super_particles_to_inject: int,
         ):
             number_of_super_particles_already_injected = 0
@@ -48,6 +50,7 @@ class SeedingMethods(BackendMethods):  # pylint: disable=too-few-public-methods
                         extensive_attributes[a, i] = (
                             seeded_particle_extensive_attributes[a, s]
                         )
+                    volume[i] = seeded_particle_volume[s]
             assert (
                 number_of_super_particles_to_inject
                 == number_of_super_particles_already_injected
@@ -63,6 +66,7 @@ class SeedingMethods(BackendMethods):  # pylint: disable=too-few-public-methods
         cell_id,
         cell_origin,
         pos_cell,
+        volume,
         extensive_attributes,
         seeded_particle_index,
         seeded_particle_multiplicity,
@@ -70,6 +74,7 @@ class SeedingMethods(BackendMethods):  # pylint: disable=too-few-public-methods
         seeded_particle_cell_origin,
         seeded_particle_pos_cell,
         seeded_particle_extensive_attributes,
+        seeded_particle_volume,
         number_of_super_particles_to_inject: int,
     ):
         self._seeding(
@@ -78,6 +83,7 @@ class SeedingMethods(BackendMethods):  # pylint: disable=too-few-public-methods
             cell_id=cell_id.data,
             cell_origin=cell_origin.data,
             pos_cell=pos_cell.data,
+            volume=volume.data,
             extensive_attributes=extensive_attributes.data,
             seeded_particle_index=seeded_particle_index.data,
             seeded_particle_multiplicity=seeded_particle_multiplicity.data,
@@ -85,5 +91,6 @@ class SeedingMethods(BackendMethods):  # pylint: disable=too-few-public-methods
             seeded_particle_cell_origin=seeded_particle_cell_origin.data,
             seeded_particle_pos_cell=seeded_particle_pos_cell.data,
             seeded_particle_extensive_attributes=seeded_particle_extensive_attributes.data,
+            seeded_particle_volume=seeded_particle_volume.data,
             number_of_super_particles_to_inject=number_of_super_particles_to_inject,
         )

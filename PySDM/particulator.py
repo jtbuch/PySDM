@@ -450,6 +450,7 @@ class Particulator:  # pylint: disable=too-many-public-methods,too-many-instance
         seeded_particle_cell_id,
         seeded_particle_cell_origin,
         seeded_particle_pos_cell,
+        seeded_particle_volume,
         seeded_particle_extensive_attributes,
         number_of_super_particles_to_inject,
     ):
@@ -476,6 +477,7 @@ class Particulator:  # pylint: disable=too-many-public-methods,too-many-instance
             cell_id=self.attributes["cell id"],
             cell_origin=self.attributes["cell origin"],
             pos_cell=self.attributes["position in cell"],
+            volume=self.attributes["volume"],
             extensive_attributes=self.attributes.get_extensive_attribute_storage(),
             seeded_particle_index=seeded_particle_index,
             seeded_particle_multiplicity=seeded_particle_multiplicity,
@@ -483,6 +485,7 @@ class Particulator:  # pylint: disable=too-many-public-methods,too-many-instance
             seeded_particle_cell_origin=seeded_particle_cell_origin,
             seeded_particle_pos_cell=seeded_particle_pos_cell,
             seeded_particle_extensive_attributes=seeded_particle_extensive_attributes,
+            seeded_particle_volume=seeded_particle_volume,
             number_of_super_particles_to_inject=number_of_super_particles_to_inject,
         )
         self.attributes.reset_idx()
