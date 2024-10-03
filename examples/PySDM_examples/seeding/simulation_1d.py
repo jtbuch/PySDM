@@ -109,8 +109,10 @@ class Simulation:
         )
         r_dry, n_in_dv = spectral_sampling.ConstantMultiplicity(
             spectra.Lognormal(
-                norm_factor=(settings.particles_per_volume_STP / 1)
-                / settings.formulae.constants.rho_STP,
+                norm_factor=(
+                    settings.seed_particles_per_volume_STP
+                    / settings.formulae.constants.rho_STP
+                ),
                 m_mode=1 * si.um,
                 s_geom=1.4,
             )
@@ -121,7 +123,8 @@ class Simulation:
         self.seeded_particle_extensive_attributes = {
             "water mass": np.array([0.0001 * si.ng] * settings.n_sd_seeding),
             "dry volume": v_dry,
-            "kappa times dry volume": 0.8 * v_dry,  # include kappa argument for seeds
+            "kappa times dry volume": settings.seed_kappa
+            * v_dry,  # include kappa argument for seeds
         }
         self.seeded_particle_multiplicity = n_in_dv * np.prod(np.array(self.mesh.size))
 
@@ -139,7 +142,8 @@ class Simulation:
             r_dry=settings.formulae.trivia.radius(volume=v_dry),
             environment=self.builder.particulator.environment,
             cell_id=cell_id,
-            kappa_times_dry_volume=0.8 * v_dry,  # include kappa argument for seeds
+            kappa_times_dry_volume=settings.seed_kappa
+            * v_dry,  # include kappa argument for seeds
         )
         self.seeded_particle_volume = settings.formulae.trivia.volume(radius=r_wet)
         self.builder.particulator.backend.mass_of_water_volume(

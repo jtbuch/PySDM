@@ -24,7 +24,8 @@ class Settings:
             "kappa",
             "rho_times_w_1",
             "particles_per_volume_STP",
-            "dt",
+            "seed_particles_per_volume_STP",
+            "seed_kappa" "dt",
             "dz",
             "precip",
             "z_max",
@@ -46,6 +47,8 @@ class Settings:
         kappa: float = 1,
         rho_times_w_1: float = 2 * si.m / si.s * si.kg / si.m**3,
         particles_per_volume_STP: int = 50 / si.cm**3,
+        seed_particles_per_volume_STP: int = 0 / si.cm**3,
+        seed_kappa: float = 0.8,
         dt: float = 1 * si.s,
         dz: float = 25 * si.m,
         z_max: float = 3000 * si.m,
@@ -65,6 +68,8 @@ class Settings:
         self.kappa = kappa
         self.rho_times_w_1 = rho_times_w_1
         self.particles_per_volume_STP = particles_per_volume_STP
+        self.seed_particles_per_volume_STP = seed_particles_per_volume_STP
+        self.seed_kappa = seed_kappa
         self.dt = dt
         self.dz = dz
         self.precip = precip
