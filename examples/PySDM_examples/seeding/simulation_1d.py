@@ -123,8 +123,7 @@ class Simulation:
         self.seeded_particle_extensive_attributes = {
             "water mass": np.array([0.0001 * si.ng] * settings.n_sd_seeding),
             "dry volume": v_dry,
-            "kappa times dry volume": settings.seed_kappa
-            * v_dry,  # include kappa argument for seeds
+            "kappa times dry volume": settings.seed_kappa * v_dry,
         }
         self.seeded_particle_multiplicity = n_in_dv * np.prod(np.array(self.mesh.size))
 
@@ -142,8 +141,7 @@ class Simulation:
             r_dry=settings.formulae.trivia.radius(volume=v_dry),
             environment=self.builder.particulator.environment,
             cell_id=cell_id,
-            kappa_times_dry_volume=settings.seed_kappa
-            * v_dry,  # include kappa argument for seeds
+            kappa_times_dry_volume=settings.seed_kappa * v_dry,
         )
         self.seeded_particle_volume = settings.formulae.trivia.volume(radius=r_wet)
         self.builder.particulator.backend.mass_of_water_volume(
