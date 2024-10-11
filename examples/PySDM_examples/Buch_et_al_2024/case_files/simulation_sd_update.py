@@ -323,8 +323,6 @@ class Simulation:
                     * np.prod(np.array(self.mesh.size))
                     / self.n_seed_sds
                 )
-            else:
-                continue
 
             if i in self.seed_t_step:
                 if seeding_type == "delta":
@@ -421,8 +419,6 @@ class Simulation:
                         seed_indx_arr
                     ] += int(self.m_param)
                     seed_count += 1
-                else:
-                    continue
 
             mpdata = self.particulator.dynamics["EulerianAdvection"].solvers
             mpdata.update_advector_field()
