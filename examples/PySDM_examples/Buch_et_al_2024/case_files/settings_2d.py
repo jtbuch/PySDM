@@ -32,6 +32,10 @@ class Settings(StratoCumulus):
             "r_seed",
             "m_param",
             "kappa_seed",
+            "int_inj_rate",
+            "seed_z_step",
+            "seed_x_step",
+            "seed_t_step",
         )
 
     def __init__(
@@ -50,6 +54,10 @@ class Settings(StratoCumulus):
         r_seed: float = None,
         m_param: float = None,
         kappa_seed: float = None,
+        int_inj_rate: Optional[float] = None,
+        seed_z_step: Optional[tuple] = None,
+        seed_x_step: Optional[tuple] = None,
+        seed_t_step: Optional[tuple] = None,
     ):
         super().__init__(
             formulae or Formulae(),
@@ -72,6 +80,10 @@ class Settings(StratoCumulus):
         self.r_seed = r_seed
         self.m_param = m_param
         self.kappa_seed = kappa_seed
+        self.int_inj_rate = int_inj_rate
+        self.seed_z_step = seed_z_step
+        self.seed_x_step = seed_x_step
+        self.seed_t_step = seed_t_step
 
         # additional breakup dynamics
         mu_r = 10 * si.um
@@ -81,3 +93,18 @@ class Settings(StratoCumulus):
         self.coalescence_efficiency = ConstEc(Ec=0.95)
         self.breakup_efficiency = ConstEb(Eb=1.0)
         self.breakup_fragmentation = Gaussian(mu=mu, sigma=sigma, vmin=vmin, nfmax=10)
+
+    @property
+    def n_sd_part(self):
+        return sum(
+            [
+                int(
+                    self.n_sd_per_mode[i]
+                    * self.grid[0]
+                    * (self.z_part[i][1] - self.z_part[i][0])
+                    * self.grid[1]
+                    * (self.x_part[i][1] - self.x_part[i][0])
+                )
+                for i in range(len(self.n_sd_per_mode))
+            ]
+        )

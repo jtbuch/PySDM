@@ -70,7 +70,13 @@ class Kinematic2D(Moist):
                 positions = spatial_discretisation.sample(
                     backend=self.particulator.backend,
                     grid=self.mesh.grid,
-                    n_sd=n_sd_per_mode[i] * self.mesh.grid[0] * self.mesh.grid[1],
+                    n_sd=int(
+                        n_sd_per_mode[i]
+                        * self.mesh.grid[0]
+                        * self.mesh.grid[1]
+                        * (z_part[i][1] - z_part[i][0])
+                        * (x_part[i][1] - x_part[i][0])
+                    ),
                     z_part=z_part[i],
                     x_part=x_part[i],
                 )
@@ -93,7 +99,13 @@ class Kinematic2D(Moist):
                 sampling = ConstantMultiplicity(spectrum)
                 r_dry, n_per_kg = sampling.sample(
                     backend=self.particulator.backend,
-                    n_sd=n_sd_per_mode[i] * self.mesh.grid[0] * self.mesh.grid[1],
+                    n_sd=int(
+                        n_sd_per_mode[i]
+                        * self.mesh.grid[0]
+                        * self.mesh.grid[1]
+                        * (z_part[i][1] - z_part[i][0])
+                        * (x_part[i][1] - x_part[i][0])
+                    ),
                 )
                 v_dry = self.formulae.trivia.volume(radius=r_dry)
                 attributes["dry volume"] = np.append(attributes["dry volume"], v_dry)

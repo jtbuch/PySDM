@@ -31,6 +31,7 @@ class Simulation:
         return self.particulator.products
 
     def reinit(self, products=None):
+        self.seeded_arr = None
         formulae = self.settings.formulae
         backend = self.backend_class(formulae=formulae)
         environment = Kinematic2D(
@@ -41,7 +42,7 @@ class Simulation:
             mixed_phase=self.settings.processes["freezing"],
         )
         builder = Builder(
-            n_sd=self.settings.n_sd, backend=backend, environment=environment
+            n_sd=self.settings.n_sd_part, backend=backend, environment=environment
         )
 
         if products is not None:
@@ -215,32 +216,7 @@ class Simulation:
         if self.storage is not None:
             self.storage.init(self.settings)
 
-    def stepwise_sd_update(self, seed_step=[], spup_flag=False):
-
-        cell_edge_z_arr = np.linspace(
-            self.particulator.attributes["position in cell"].data[0, :].min(),
-            self.particulator.attributes["position in cell"].data[0, :].max(),
-            self.settings.grid[0],
-        )
-        ncell_z_arr = (
-            np.digitize(
-                self.particulator.attributes["position in cell"].data[0, :],
-                cell_edge_z_arr,
-            )
-            - 1
-        )
-        cell_edge_x_arr = np.linspace(
-            self.particulator.attributes["position in cell"].data[1, :].min(),
-            self.particulator.attributes["position in cell"].data[1, :].max(),
-            self.settings.grid[1],
-        )
-        ncell_x_arr = (
-            np.digitize(
-                self.particulator.attributes["position in cell"].data[1, :],
-                cell_edge_x_arr,
-            )
-            - 1
-        )
+    def stepwise_sd_update(self, seeding_type=None, spup_flag=False, tol=0.5):
 
         # spinup the simulation for 1 hour to get the initial state
         if spup_flag:
@@ -255,15 +231,75 @@ class Simulation:
             self.set(Freezing, "enable", True)
 
         for step in self.settings.output_steps:
-            if step in seed_step:
-                try:
+
+            if seeding_type is not None:
+                seed_count = 0
+                if seeding_type == "delta":
+                    self.n_seed_sds = 1
+                    cell_edge_z_arr = np.linspace(
+                        self.particulator.attributes["position in cell"]
+                        .data[0, :]
+                        .min(),
+                        self.particulator.attributes["position in cell"]
+                        .data[0, :]
+                        .max(),
+                        self.settings.grid[0],
+                    )
+                    ncell_z_arr = (
+                        np.digitize(
+                            self.particulator.attributes["position in cell"].data[0, :],
+                            cell_edge_z_arr,
+                        )
+                        - 1
+                    )
+                    cell_edge_x_arr = np.linspace(
+                        self.particulator.attributes["position in cell"]
+                        .data[1, :]
+                        .min(),
+                        self.particulator.attributes["position in cell"]
+                        .data[1, :]
+                        .max(),
+                        self.settings.grid[1],
+                    )
+                    ncell_x_arr = (
+                        np.digitize(
+                            self.particulator.attributes["position in cell"].data[1, :],
+                            cell_edge_x_arr,
+                        )
+                        - 1
+                    )
+                elif seeding_type == "aggregate":
+                    self.n_seed_sds = int(
+                        self.settings.n_sd_per_mode[
+                            1
+                        ]  # fix index for multiple background and seed populations
+                        * self.settings.grid[0]
+                        * (
+                            self.settings.z_part[1][1] - self.settings.z_part[1][0]
+                        )  # fix index for multiple background and seed populations
+                        * self.settings.grid[1]
+                        * (
+                            self.settings.x_part[1][1] - self.settings.x_part[1][0]
+                        )  # fix index for multiple background and seed populations
+                    )
+                    self.n_seed_sds_step = int(
+                        self.n_seed_sds / len(self.settings.seed_t_step)
+                    )
+                self.m_param = (
+                    self.settings.int_inj_rate
+                    * self.settings.grid[0]
+                    * self.settings.grid[1]
+                ) / self.n_seed_sds
+
+            if step in self.settings.seed_t_step:
+                if seeding_type == "delta":
                     # find potential seed SDs in the neighborhood of the target radius, r_seed
                     potseed_arr = np.where(
                         np.abs(
                             self.particulator.attributes["radius"].data
                             - self.settings.r_seed
                         )
-                        < self.settings.r_seed / 2
+                        < self.settings.r_seed / tol
                     )[0]
                     # check whether the potential seed SDs are in the target region and randomly select one
                     potindx_arr = np.where(
@@ -293,70 +329,107 @@ class Simulation:
                         )
                     )[0]
                     potseed = np.random.choice(potseed_arr[potindx_arr], 1)[0]
-                except:
-                    # relax threshold for potential seed SDs
-                    potseed_arr = np.where(
-                        np.abs(
-                            self.particulator.attributes["radius"].data
-                            - self.settings.r_seed
-                        )
-                        < self.settings.r_seed
+
+                    # find the grid cell neighbors of the candidate SD
+                    npotseed_arr = np.where(
+                        (ncell_z_arr == ncell_z_arr[potseed])
+                        & (ncell_x_arr == ncell_x_arr[potseed])
                     )[0]
+
+                    gamma_fac = (
+                        self.particulator.attributes["multiplicity"].data[potseed]
+                        / self.particulator.attributes["multiplicity"].data[
+                            npotseed_arr
+                        ]
+                    ).astype(int)
+                    gamma_fac[gamma_fac == 0] = 1
+                    self.particulator.attributes["multiplicity"].data[
+                        potseed
+                    ] = self.settings.m_param
+                    self.particulator.attributes["kappa times dry volume"].data[
+                        potseed
+                    ] = (
+                        self.particulator.attributes["dry volume"].data[potseed]
+                        * self.settings.kappa_seed
+                    )
+                    self.particulator.attributes["water mass"].data[npotseed_arr] += (
+                        gamma_fac
+                        * self.particulator.attributes["water mass"].data[potseed]
+                        / len(npotseed_arr)
+                    )
+                    self.particulator.attributes["water mass"].data[potseed] = (
+                        self.particulator.attributes["water mass"].data[potseed]
+                        / len(npotseed_arr)
+                    )
+                elif seeding_type == "aggregate":
+                    potseed_arr = np.where(
+                        self.particulator.attributes["kappa"].data
+                        > (self.settings.kappa_seed - 0.05)
+                    )[0]
+
                     potindx_arr = np.where(
                         (
-                            self.particulator.attributes["position in cell"].data[
+                            self.particulator.attributes["cell origin"].data[
                                 0, potseed_arr
                             ]
-                            > self.settings.z_part[1][0]
+                            > int(
+                                self.settings.grid[0]
+                                * self.settings.seed_z_step[seed_count][0]
+                            )
                         )
                         & (
-                            self.particulator.attributes["position in cell"].data[
+                            self.particulator.attributes["cell origin"].data[
                                 0, potseed_arr
                             ]
-                            < self.settings.z_part[1][1]
+                            < int(
+                                self.settings.grid[0]
+                                * self.settings.seed_z_step[seed_count][1]
+                            )
                         )
                         & (
-                            self.particulator.attributes["position in cell"].data[
+                            self.particulator.attributes["cell origin"].data[
                                 1, potseed_arr
                             ]
-                            > self.settings.x_part[1][0]
+                            > int(
+                                self.settings.grid[1]
+                                * self.settings.seed_x_step[seed_count][0]
+                            )
                         )
                         & (
-                            self.particulator.attributes["position in cell"].data[
+                            self.particulator.attributes["cell origin"].data[
                                 1, potseed_arr
                             ]
-                            < self.settings.x_part[1][1]
+                            < int(
+                                self.settings.grid[1]
+                                * self.settings.seed_x_step[seed_count][1]
+                            )
+                        )
+                        & (
+                            self.particulator.attributes["radius"].data[potseed_arr]
+                            < self.settings.r_seed / tol
                         )
                     )[0]
-                    potseed = np.random.choice(potseed_arr[potindx_arr], 1)[0]
 
-                # find the grid cell neighbors of the candidate SD
-                npotseed_arr = np.where(
-                    (ncell_z_arr == ncell_z_arr[potseed])
-                    & (ncell_x_arr == ncell_x_arr[potseed])
-                )[0]
+                    # randomly select a subset of potential seed SDs depending on number of steps ensuring each candidate seed is only selected once
+                    if self.seeded_arr is None:
+                        seed_indx_arr = np.random.choice(
+                            potindx_arr, self.n_seed_sds_step
+                        )
+                        self.seeded_arr = seed_indx_arr
+                    else:
+                        seed_indx_arr = np.random.choice(
+                            np.setdiff1d(potindx_arr, self.seeded_arr),
+                            self.n_seed_sds_step,
+                        )
+                        self.seeded_arr = np.concatenate(
+                            (self.seeded_arr, seed_indx_arr)
+                        )
 
-                gamma_fac = (
-                    self.particulator.attributes["multiplicity"].data[potseed]
-                    / self.particulator.attributes["multiplicity"].data[npotseed_arr]
-                ).astype(int)
-                gamma_fac[gamma_fac == 0] = 1
-                self.particulator.attributes["multiplicity"].data[
-                    potseed
-                ] = self.settings.m_param
-                self.particulator.attributes["kappa times dry volume"].data[potseed] = (
-                    self.particulator.attributes["dry volume"].data[potseed]
-                    * self.settings.kappa_seed
-                )
-                self.particulator.attributes["water mass"].data[npotseed_arr] += (
-                    gamma_fac
-                    * self.particulator.attributes["water mass"].data[potseed]
-                    / len(npotseed_arr)
-                )
-                self.particulator.attributes["water mass"].data[potseed] = (
-                    self.particulator.attributes["water mass"].data[potseed]
-                    / len(npotseed_arr)
-                )
+                    # increase the multiplicities of the selected SDs
+                    self.particulator.attributes["multiplicity"].data[
+                        seed_indx_arr
+                    ] += int(self.m_param)
+                    seed_count += 1
 
             self.particulator.run(step - self.particulator.n_steps)
             self.store(step)

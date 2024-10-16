@@ -131,6 +131,7 @@ class Simulation:
             backend=backend(formulae=settings.formulae),
             grid=self.mesh.grid,
             n_sd=settings.n_sd_seeding,
+            # z_part=settings.seed_z_part,
         )
         cell_id, cell_origin, pos_cell = self.mesh.cellular_attributes(positions)
         self.seeded_particle_cell_id = cell_id
