@@ -286,10 +286,11 @@ class Simulation:
                         self.n_seed_sds / len(self.settings.seed_t_step)
                     )
                 self.m_param = (
-                    self.settings.int_inj_rate
-                    * self.settings.grid[0]
-                    * self.settings.grid[1]
-                ) / self.n_seed_sds
+                    self.particulator.attributes["multiplicity"].data.max()
+                    * (self.settings.int_inj_rate / self.settings.bkg_conc)
+                    * (self.settings.grid[0] * self.settings.grid[1])
+                    / self.n_seed_sds
+                )
 
             if step in self.settings.seed_t_step:
                 if seeding_type == "delta":

@@ -23,7 +23,7 @@ class Settings(StratoCumulus):
             "initial_dry_potential_temperature_profile",
             "initial_vapour_mixing_ratio_profile",
             "rhod_w_max",
-            "n_sd_per_mode",
+            "bkg_conc" "n_sd_per_mode",
             "aerosol_modes_by_kappa",
             "z_part",
             "x_part",
@@ -44,6 +44,7 @@ class Settings(StratoCumulus):
         rhod_w_max: float = 0.6 * si.metres / si.seconds * (si.kilogram / si.metre**3),
         grid: tuple = None,
         size: tuple = None,
+        bkg_conc: float = 0.0,
         n_sd_per_mode: tuple = None,
         aerosol_modes_by_kappa: Dict[float, Spectrum] = None,
         z_part: Optional[tuple] = None,
@@ -68,6 +69,7 @@ class Settings(StratoCumulus):
 
         self.grid = grid
         self.size = size
+        self.bkg_conc = bkg_conc
         self.z_part = z_part
         self.x_part = x_part
 
